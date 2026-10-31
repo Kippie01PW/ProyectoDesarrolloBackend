@@ -1,6 +1,7 @@
 package com.uc.ms_security.authorization;
 
 import com.uc.ms_security.service.PermissionService;
+import com.uc.ms_security.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManager;
@@ -10,6 +11,8 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
 import org.springframework.stereotype.Component;
 
 import java.util.function.Supplier;
+import java.time.LocalDateTime;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Component
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ public class DynamicAuthorizationManager
         implements AuthorizationManager<RequestAuthorizationContext> {
 
     private final PermissionService permissionService;
+    private final SessionRepository sessionRepository;
 
     @Override
     public AuthorizationResult authorize(
@@ -25,6 +29,13 @@ public class DynamicAuthorizationManager
 
         Authentication authentication = authenticationSupplier.get();
         if (authentication == null || !authentication.isAuthenticated()) {
+            return new AuthorizationDecision(false);
+        }
+        HttpServletRequest request = context.getRequest();
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")
+                || sessionRepository.findByTokenAndActiveTrueAndExpirationAfter(
+                header.substring(7), LocalDateTime.now()).isEmpty()) {
             return new AuthorizationDecision(false);
         }
 
@@ -37,8 +48,8 @@ public class DynamicAuthorizationManager
 
         boolean permitted = permissionService.hasPermission(
                 userId,
-                context.getRequest().getMethod(),
-                context.getRequest().getRequestURI()
+                request.getMethod(),
+                request.getRequestURI()
         );
 
         return new AuthorizationDecision(permitted);

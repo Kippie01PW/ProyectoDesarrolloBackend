@@ -34,11 +34,17 @@ public class User {
     )
     private String email;
 
-    @Column(
-            nullable = false,
-            length = 255
-    )
+    @Column(length = 255)
     private String password;
+
+    @Column(name = "auth_provider", nullable = false, length = 30)
+    private String authProvider = "LOCAL";
+
+    @Column(name = "provider_subject", unique = true, length = 200)
+    private String providerSubject;
+
+    @Column(name = "two_factor_enabled", nullable = false)
+    private boolean twoFactorEnabled;
 
         @OneToOne(
                         mappedBy = "user",

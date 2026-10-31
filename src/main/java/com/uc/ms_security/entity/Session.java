@@ -27,6 +27,15 @@ public class Session {
     @Column(name = "code_2fa", length = 10)
     private String code2FA;
 
+    @Column(name = "code_2fa_hash", length = 100)
+    private String code2FAHash;
+
+    @Column(name = "code_2fa_expiration")
+    private LocalDateTime code2FAExpiration;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
     @ManyToOne(
             fetch = FetchType.LAZY,
             optional = false
