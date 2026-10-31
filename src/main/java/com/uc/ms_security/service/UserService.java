@@ -31,7 +31,7 @@ public class UserService {
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new ApplicationException(
                 ErrorCase.ALREADY_EXISTS,
-                    "Ya existe un usuario con este email"
+                    "El correo ya está registrado."
             );
         }
         String encodedPassword = passwordEncoder.encode(dto.getPassword());

@@ -29,15 +29,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/login",
-                                "/api/auth/register",
-                                "/api/auth/2fa/verify",
-                                "/api/auth/oauth/firebase",
-                                "/api/auth/password-recovery",
-                                "/api/auth/password-reset"
-                        ).permitAll()
-                        .requestMatchers("/api/auth/logout", "/api/auth/2fa").authenticated()
+                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                         .anyRequest().access(dynamicAuthorizationManager))
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .jwt(Customizer.withDefaults()));
