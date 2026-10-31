@@ -51,6 +51,11 @@ public class UserController {
         return userService.findByIdAndRoles(id);
     }
 
+    @GetMapping("/available-for-role/{roleId}")
+    public List<UserResponseDTO> findAvailableForRole(@PathVariable Long roleId) {
+        return userService.findAvailableForRole(roleId);
+    }
+
     @PutMapping("/{id}")
     public UserResponseDTO update(
             @PathVariable Long id,

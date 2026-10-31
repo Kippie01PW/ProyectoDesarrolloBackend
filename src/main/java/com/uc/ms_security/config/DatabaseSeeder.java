@@ -2,9 +2,7 @@ package com.uc.ms_security.config;
 
 import com.uc.ms_security.entity.Permission;
 import com.uc.ms_security.entity.Role;
-import com.uc.ms_security.entity.RolePermission;
 import com.uc.ms_security.entity.User;
-import com.uc.ms_security.entity.UserRole;
 import com.uc.ms_security.repository.PermissionRepository;
 import com.uc.ms_security.repository.RolePermissionRepository;
 import com.uc.ms_security.repository.RoleRepository;
@@ -24,18 +22,34 @@ public class DatabaseSeeder {
             new PermissionSeed("GET", "/api/users", "User"),
             new PermissionSeed("POST", "/api/users", "User"),
             new PermissionSeed("GET", "/api/users/{id}", "User"),
+            new PermissionSeed("GET", "/api/users/{id}/detail", "User"),
+            new PermissionSeed("GET", "/api/users/{id}/detail-with-sessions", "User"),
+            new PermissionSeed("GET", "/api/users/{id}/detail-with-roles", "User"),
+            new PermissionSeed("GET", "/api/users/available-for-role/{id}", "User"),
             new PermissionSeed("PUT", "/api/users/{id}", "User"),
             new PermissionSeed("DELETE", "/api/users/{id}", "User"),
             new PermissionSeed("GET", "/api/roles", "Role"),
             new PermissionSeed("POST", "/api/roles", "Role"),
             new PermissionSeed("GET", "/api/roles/{id}", "Role"),
+            new PermissionSeed("GET", "/api/roles/{id}/detail-with-permissions", "Role"),
             new PermissionSeed("PUT", "/api/roles/{id}", "Role"),
             new PermissionSeed("DELETE", "/api/roles/{id}", "Role"),
             new PermissionSeed("GET", "/api/permissions", "Permission"),
             new PermissionSeed("POST", "/api/permissions", "Permission"),
             new PermissionSeed("GET", "/api/permissions/{id}", "Permission"),
             new PermissionSeed("PUT", "/api/permissions/{id}", "Permission"),
-            new PermissionSeed("DELETE", "/api/permissions/{id}", "Permission")
+            new PermissionSeed("DELETE", "/api/permissions/{id}", "Permission"),
+            new PermissionSeed("GET", "/api/user-roles", "UserRole"),
+            new PermissionSeed("POST", "/api/user-roles", "UserRole"),
+            new PermissionSeed("GET", "/api/user-roles/users/{id}", "UserRole"),
+            new PermissionSeed("GET", "/api/user-roles/roles/{id}", "UserRole"),
+            new PermissionSeed("GET", "/api/user-roles/roles/{id}/available-users", "UserRole"),
+            new PermissionSeed("DELETE", "/api/user-roles/{id}/{id}", "UserRole"),
+            new PermissionSeed("GET", "/api/role-permissions", "RolePermission"),
+            new PermissionSeed("POST", "/api/role-permissions", "RolePermission"),
+            new PermissionSeed("GET", "/api/role-permissions/roles/{id}", "RolePermission"),
+            new PermissionSeed("GET", "/api/role-permissions/permissions/{id}", "RolePermission"),
+            new PermissionSeed("DELETE", "/api/role-permissions/{id}/{id}", "RolePermission")
     };
 
     private final UserRepository userRepository;

@@ -3,11 +3,13 @@ package com.uc.ms_security.service;
 import com.uc.ms_security.dto.AssignRoleRequestDTO;
 import com.uc.ms_security.dto.RoleUserResponseDTO;
 import com.uc.ms_security.dto.UserRoleResponseDTO;
+import com.uc.ms_security.dto.user.UserResponseDTO;
 import com.uc.ms_security.entity.Role;
 import com.uc.ms_security.entity.User;
 import com.uc.ms_security.entity.UserRole;
 import com.uc.ms_security.exception.ApplicationException;
 import com.uc.ms_security.exception.ErrorCase;
+import com.uc.ms_security.mapper.UserMapper;
 import com.uc.ms_security.mapper.UserRoleMapper;
 import com.uc.ms_security.repository.RoleRepository;
 import com.uc.ms_security.repository.UserRepository;
@@ -26,6 +28,7 @@ public class UserRoleService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final UserRoleMapper userRoleMapper;
+    private final UserMapper userMapper;
 
     @Transactional
     public UserRoleResponseDTO assign(AssignRoleRequestDTO dto) {
@@ -60,6 +63,17 @@ public class UserRoleService {
     @Transactional(readOnly = true)
     public List<RoleUserResponseDTO> findByRoleId(Long roleId) {
         return userRoleMapper.toRoleUserResponseDTOList(userRoleRepository.findAllByRoleId(roleId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> findAvailableUsersByRoleId(Long roleId) {
+        if (!roleRepository.existsById(roleId)) {
+            throw new ApplicationException(
+                    ErrorCase.NOT_FOUND,
+                    "Rol no encontrado con id: " + roleId
+            );
+        }
+        return userMapper.toResponseDTOList(userRepository.findAvailableUsersForRoleId(roleId));
     }
 
     @Transactional

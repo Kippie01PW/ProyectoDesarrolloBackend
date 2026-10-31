@@ -7,6 +7,7 @@ import com.uc.ms_security.entity.Role;
 import com.uc.ms_security.exception.ApplicationException;
 import com.uc.ms_security.exception.ErrorCase;
 import com.uc.ms_security.mapper.RoleMapper;
+import com.uc.ms_security.repository.RolePermissionRepository;
 import com.uc.ms_security.repository.RoleRepository;
 import com.uc.ms_security.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
+    private final RolePermissionRepository rolePermissionRepository;
     private final RoleMapper roleMapper;
 
     public RoleResponseDTO create(RoleRequestDTO dto) {
@@ -41,8 +43,7 @@ public class RoleService {
         Role role = roleRepository.findWithPermissionsById(id)
                 .orElseThrow(() -> new ApplicationException(
                         ErrorCase.NOT_FOUND,
-                        "Rol no encontrado con id: " + id
-                ));
+                        "Rol no encontrado con id: " + id));
         return roleMapper.toPermissionsResponseDTO(role);
     }
 
@@ -60,8 +61,12 @@ public class RoleService {
         if (userRoleRepository.existsByRoleId(id)) {
             throw new ApplicationException(
                     ErrorCase.INVALID_OPERATION,
-                    "No se puede eliminar un rol que está asignado"
-            );
+                    "No se puede eliminar un rol que tiene usuarios asignados");
+        }
+        if (rolePermissionRepository.existsByRoleId(id)) {
+            throw new ApplicationException(
+                    ErrorCase.INVALID_OPERATION,
+                    "No se puede eliminar un rol que tiene permisos asignados");
         }
         roleRepository.delete(role);
     }

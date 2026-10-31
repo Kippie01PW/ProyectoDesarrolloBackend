@@ -3,6 +3,7 @@ package com.uc.ms_security.controller;
 import com.uc.ms_security.dto.AssignRoleRequestDTO;
 import com.uc.ms_security.dto.RoleUserResponseDTO;
 import com.uc.ms_security.dto.UserRoleResponseDTO;
+import com.uc.ms_security.dto.user.UserResponseDTO;
 import com.uc.ms_security.service.UserRoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,11 @@ public class UserRoleController {
     @GetMapping("/roles/{roleId}")
     public List<RoleUserResponseDTO> findByRoleId(@PathVariable Long roleId) {
         return userRoleService.findByRoleId(roleId);
+    }
+
+    @GetMapping("/roles/{roleId}/available-users")
+    public List<UserResponseDTO> findAvailableUsersByRoleId(@PathVariable Long roleId) {
+        return userRoleService.findAvailableUsersByRoleId(roleId);
     }
 
     @DeleteMapping("/{userId}/{roleId}")

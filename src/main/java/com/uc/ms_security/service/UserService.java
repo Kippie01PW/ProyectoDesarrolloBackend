@@ -10,10 +10,12 @@ import com.uc.ms_security.entity.User;
 import com.uc.ms_security.exception.ApplicationException;
 import com.uc.ms_security.exception.ErrorCase;
 import com.uc.ms_security.mapper.UserMapper;
+import com.uc.ms_security.repository.RoleRepository;
 import com.uc.ms_security.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,33 +24,32 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
-
+    private final RoleRepository roleRepository;
     private final UserMapper userMapper;
-
     private final PasswordEncoder passwordEncoder;
 
     public UserResponseDTO create(CreateUserDTO dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new ApplicationException(
-                ErrorCase.ALREADY_EXISTS,
-                    "El correo ya está registrado."
-            );
+                    ErrorCase.ALREADY_EXISTS,
+                    "El correo ya está registrado.");
         }
         String encodedPassword = passwordEncoder.encode(dto.getPassword());
         User user = userMapper.toEntity(dto, encodedPassword);
         User savedUser = userRepository.save(user);
         return userMapper.toResponseDTO(savedUser);
     }
+
     public List<UserResponseDTO> findAll() {
-        List<User> users =userRepository.findAll();
+        List<User> users = userRepository.findAll();
         return userMapper.toResponseDTOList(users);
     }
+
     private User findUser(Long id) {
         return userRepository.findById(id)
-            .orElseThrow(() -> new ApplicationException(
-                ErrorCase.NOT_FOUND,
-                "Usuario no encontrado con id: " + id
-                ));
+                .orElseThrow(() -> new ApplicationException(
+                        ErrorCase.NOT_FOUND,
+                        "Usuario no encontrado con id: " + id));
     }
 
     public UserResponseDTO findById(Long id) {
@@ -60,8 +61,7 @@ public class UserService {
         User user = userRepository.findWithProfileById(id)
                 .orElseThrow(() -> new ApplicationException(
                         ErrorCase.NOT_FOUND,
-                        "Usuario no encontrado con id: " + id
-                ));
+                        "Usuario no encontrado con id: " + id));
         return userMapper.toDetailResponseDTO(user);
     }
 
@@ -69,8 +69,7 @@ public class UserService {
         User user = userRepository.findWithSessionsById(id)
                 .orElseThrow(() -> new ApplicationException(
                         ErrorCase.NOT_FOUND,
-                        "Usuario no encontrado con id: " + id
-                ));
+                        "Usuario no encontrado con id: " + id));
         return userMapper.toSessionsResponseDTO(user);
     }
 
@@ -78,18 +77,26 @@ public class UserService {
         User user = userRepository.findWithRolesById(id)
                 .orElseThrow(() -> new ApplicationException(
                         ErrorCase.NOT_FOUND,
-                        "Usuario no encontrado con id: " + id
-                ));
+                        "Usuario no encontrado con id: " + id));
         return userMapper.toRolesResponseDTO(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> findAvailableForRole(Long roleId) {
+        if (!roleRepository.existsById(roleId)) {
+            throw new ApplicationException(
+                    ErrorCase.NOT_FOUND,
+                    "Rol no encontrado con id: " + roleId);
+        }
+        return userMapper.toResponseDTOList(userRepository.findAvailableUsersForRoleId(roleId));
     }
 
     public UserResponseDTO update(Long id, UpdateUserDTO dto) {
         User user = findUser(id);
         if (userRepository.existsByEmailAndIdNot(dto.getEmail(), id)) {
             throw new ApplicationException(
-                ErrorCase.ALREADY_EXISTS,
-                    "El email pertenece a otro usuario"
-            );
+                    ErrorCase.ALREADY_EXISTS,
+                    "El email pertenece a otro usuario");
         }
         userMapper.updateBasicData(dto, user);
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
@@ -98,6 +105,7 @@ public class UserService {
         User updatedUser = userRepository.save(user);
         return userMapper.toResponseDTO(updatedUser);
     }
+
     public void delete(Long id) {
         User user = findUser(id);
         userRepository.delete(user);
