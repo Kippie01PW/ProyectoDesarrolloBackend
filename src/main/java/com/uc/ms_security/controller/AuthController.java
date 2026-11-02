@@ -5,7 +5,6 @@ import com.uc.ms_security.dto.auth.FirebaseLoginRequestDTO;
 import com.uc.ms_security.dto.auth.LoginRequestDTO;
 import com.uc.ms_security.dto.auth.PasswordRecoveryRequestDTO;
 import com.uc.ms_security.dto.auth.PasswordResetRequestDTO;
-import com.uc.ms_security.dto.auth.RegisterRequestDTO;
 import com.uc.ms_security.dto.auth.TwoFactorSettingDTO;
 import com.uc.ms_security.dto.auth.TwoFactorVerifyRequestDTO;
 import com.uc.ms_security.dto.user.UserResponseDTO;
@@ -34,12 +33,6 @@ public class AuthController {
     @GetMapping("/me")
     public UserResponseDTO currentUser(Authentication authentication) {
         return userService.findById(Long.valueOf(authentication.getName()));
-    }
-
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponseDTO register(@Valid @RequestBody RegisterRequestDTO dto) {
-        return authService.register(dto);
     }
 
     @PostMapping("/2fa/verify")
