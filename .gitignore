@@ -44,6 +44,7 @@ application-*.yaml
 
 ### Secrets and credentials ###
 FIREBASE_OAUTH.md
+GUIA_2FA_FIREBASE_NOTIFICACIONES.md
 firebase-service-account.json
 secrets/
 .secrets/

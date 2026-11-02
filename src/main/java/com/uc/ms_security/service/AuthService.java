@@ -85,12 +85,25 @@ public class AuthService {
 
     public AuthResponseDTO verifyTwoFactor(TwoFactorVerifyRequestDTO dto) {
         Session session = sessionRepository.findByToken(dto.challengeToken())
-                .orElseThrow(this::unauthorized);
+                .orElseThrow(() -> new ApplicationException(
+                        ErrorCase.UNAUTHORIZED,
+                        "La sesión de verificación ya no es válida"));
         LocalDateTime now = LocalDateTime.now();
-        if (session.isActive() || session.getCode2FAExpiration() == null
-                || session.getCode2FAExpiration().isBefore(now)
-                || !passwordEncoder.matches(dto.code(), session.getCode2FAHash())) {
-            throw unauthorized();
+        if (session.isActive()) {
+            throw new ApplicationException(
+                    ErrorCase.UNAUTHORIZED,
+                    "Este código ya fue utilizado. Inicia sesión nuevamente");
+        }
+        if (session.getCode2FAExpiration() == null
+                || session.getCode2FAExpiration().isBefore(now)) {
+            throw new ApplicationException(
+                    ErrorCase.UNAUTHORIZED,
+                    "El código de verificación expiró. Inicia sesión nuevamente");
+        }
+        if (!passwordEncoder.matches(dto.code(), session.getCode2FAHash())) {
+            throw new ApplicationException(
+                    ErrorCase.UNAUTHORIZED,
+                    "El código de verificación es incorrecto");
         }
         session.setActive(true);
         session.setCode2FAHash(null);
