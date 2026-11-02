@@ -1,19 +1,42 @@
-# microservicio_seguridad
+# Microservicio de seguridad
 
-## Autenticación
+Servicio Spring Boot para usuarios, roles, permisos, sesiones y autenticación.
 
-Los endpoints de autenticación están disponibles bajo `/api/auth`:
+## Endpoints de autenticación
 
-- `POST /register` registra usuarios locales con contraseña segura.
-- `POST /login` autentica con correo y contraseña. Si el usuario tiene 2FA, devuelve `requiresTwoFactor` y `challengeToken`.
-- `POST /2fa/verify` valida el código enviado por correo y activa la sesión.
-- `POST /oauth/firebase` valida un ID token emitido por Firebase (Google, GitHub, Microsoft u otro proveedor configurado en Firebase).
-- `POST /password-recovery` y `POST /password-reset` gestionan la recuperación de usuarios locales.
-- `POST /logout` invalida la sesión interna asociada al Bearer token.
-- `PUT /2fa` habilita o deshabilita 2FA para el usuario autenticado.
+- `POST /api/auth/register` o `POST /api/users`: registro local.
+- `POST /api/auth/login`: login con correo y contraseña.
+- `POST /api/auth/2fa/verify`: valida un desafío 2FA por correo.
+- `PUT /api/auth/2fa-settings`: activa o desactiva 2FA.
+- `POST /api/auth/oauth`: login con un ID token de Firebase.
+- `GET /api/auth/me`: devuelve el usuario, roles y permisos actuales.
+- `POST /api/auth/logout`: revoca la sesión y el JWT presentado.
+- `POST /api/auth/password-recovery`: solicita recuperación sin revelar si el correo existe.
+- `POST /api/auth/password-reset`: cambia la contraseña usando un token de un solo uso.
 
-Configura `FIREBASE_ENABLED=true` y `FIREBASE_SERVICE_ACCOUNT_JSON` con las credenciales del proyecto Firebase y
-`NOTIFICATION_SERVICE_URL` con la URL del monolito de notificaciones. Por defecto se usa
-`http://localhost:5000/send-email`, cuyo contrato recibe `{ "to": "...", "text": "..." }`.
-También se pueden ajustar `TWO_FACTOR_CODE_DURATION_MINUTES` y
-`PASSWORD_RESET_DURATION_MINUTES`.
+Las sesiones se registran en la base de datos. Un JWT firmado no es suficiente:
+también debe corresponder a una sesión activa y no expirada.
+
+## Configuración
+
+Define `JWT_SECRET` con al menos 32 bytes. Para MySQL se usan las propiedades
+`spring.datasource.*` de `src/main/resources/application.properties`.
+
+El correo para 2FA y recuperación se configura mediante:
+
+```text
+EMAIL_SERVICE_URL=http://localhost:5000
+EMAIL_SERVICE_API_KEY=...
+```
+
+Para OAuth con Firebase se requiere `FIREBASE_PROJECT_ID`. El backend verifica
+la firma RS256 y las claims del ID token usando las claves públicas de Firebase;
+no se debe guardar una cuenta de servicio en el repositorio.
+
+## Validación
+
+```powershell
+.\mvnw.cmd test
+```
+
+Las pruebas usan H2 en memoria y no requieren MySQL ni un servicio de correo real.

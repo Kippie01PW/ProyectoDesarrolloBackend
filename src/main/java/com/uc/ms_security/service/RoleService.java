@@ -1,7 +1,7 @@
 package com.uc.ms_security.service;
 
-import com.uc.ms_security.dto.RoleRequestDTO;
 import com.uc.ms_security.dto.RolePermissionsResponseDTO;
+import com.uc.ms_security.dto.RoleRequestDTO;
 import com.uc.ms_security.dto.RoleResponseDTO;
 import com.uc.ms_security.entity.Role;
 import com.uc.ms_security.exception.ApplicationException;
@@ -12,6 +12,7 @@ import com.uc.ms_security.repository.RoleRepository;
 import com.uc.ms_security.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -26,53 +27,89 @@ public class RoleService {
 
     public RoleResponseDTO create(RoleRequestDTO dto) {
         if (roleRepository.existsByNameIgnoreCase(dto.getName())) {
-            throw new ApplicationException(ErrorCase.ALREADY_EXISTS, "Ya existe un rol con ese nombre");
+            throw new ApplicationException(
+                    ErrorCase.ALREADY_EXISTS,
+                    "Ya existe un rol con ese nombre"
+            );
         }
-        return roleMapper.toResponseDTO(roleRepository.save(roleMapper.toEntity(dto)));
+
+        Role role = roleMapper.toEntity(dto);
+
+        return roleMapper.toResponseDTO(
+                roleRepository.save(role)
+        );
     }
 
     public List<RoleResponseDTO> findAll() {
-        return roleMapper.toResponseDTOList(roleRepository.findAll());
+        return roleMapper.toResponseDTOList(
+                roleRepository.findAll()
+        );
     }
 
     public RoleResponseDTO findById(Long id) {
-        return roleMapper.toResponseDTO(findEntityById(id));
+        return roleMapper.toResponseDTO(
+                findEntityById(id)
+        );
     }
 
-    public RolePermissionsResponseDTO findByIdAndPermissions(Long id) {
-        Role role = roleRepository.findWithPermissionsById(id)
-                .orElseThrow(() -> new ApplicationException(
-                        ErrorCase.NOT_FOUND,
-                        "Rol no encontrado con id: " + id));
-        return roleMapper.toPermissionsResponseDTO(role);
-    }
+    public RoleResponseDTO update(
+            Long id,
+            RoleRequestDTO dto) {
 
-    public RoleResponseDTO update(Long id, RoleRequestDTO dto) {
         Role role = findEntityById(id);
-        if (roleRepository.existsByNameIgnoreCaseAndIdNot(dto.getName(), id)) {
-            throw new ApplicationException(ErrorCase.ALREADY_EXISTS, "Ya existe un rol con ese nombre");
+
+        if (roleRepository.existsByNameIgnoreCaseAndIdNot(
+                dto.getName(), id)) {
+            throw new ApplicationException(
+                    ErrorCase.ALREADY_EXISTS,
+                    "Ya existe un rol con ese nombre"
+            );
         }
+
         roleMapper.updateEntity(dto, role);
-        return roleMapper.toResponseDTO(roleRepository.save(role));
+
+        return roleMapper.toResponseDTO(
+                roleRepository.save(role)
+        );
     }
 
+    @Transactional
     public void delete(Long id) {
         Role role = findEntityById(id);
+
         if (userRoleRepository.existsByRoleId(id)) {
             throw new ApplicationException(
                     ErrorCase.INVALID_OPERATION,
-                    "No se puede eliminar un rol que tiene usuarios asignados");
+                    "No se puede eliminar un rol que está asignado"
+            );
         }
-        if (rolePermissionRepository.existsByRoleId(id)) {
-            throw new ApplicationException(
-                    ErrorCase.INVALID_OPERATION,
-                    "No se puede eliminar un rol que tiene permisos asignados");
-        }
+
+        // Solo se retiran las filas intermedias de este rol; los permisos
+        // (compartidos con otros roles) y los usuarios no se tocan.
+        rolePermissionRepository.deleteAllByRoleId(id);
         roleRepository.delete(role);
     }
 
     private Role findEntityById(Long id) {
         return roleRepository.findById(id)
-                .orElseThrow(() -> new ApplicationException(ErrorCase.NOT_FOUND, "Rol no encontrado"));
+                .orElseThrow(
+                        () -> new ApplicationException(
+                                ErrorCase.NOT_FOUND,
+                                "Rol no encontrado con id: " + id
+                        )
+                );
+    }
+
+    public RolePermissionsResponseDTO findByIdAndPermissions(Long id) {
+        Role role = roleRepository
+                .findWithPermissionsById(id)
+                .orElseThrow(
+                        () -> new ApplicationException(
+                                ErrorCase.NOT_FOUND,
+                                "Rol no encontrado con id: " + id
+                        )
+                );
+
+        return roleMapper.toPermissionsResponseDTO(role);
     }
 }

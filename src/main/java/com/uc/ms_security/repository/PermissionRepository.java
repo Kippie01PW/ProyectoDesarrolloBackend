@@ -10,16 +10,18 @@ import java.util.Optional;
 
 public interface PermissionRepository extends JpaRepository<Permission, Long> {
 
-    boolean existsByUrlAndMethodAndModel(String url, String method, String model);
+    boolean existsByUrlAndMethod(
+            String url,
+            String method
+    );
 
-    boolean existsByUrlAndMethodAndModelAndIdNot(
+    boolean existsByUrlAndMethodAndIdNot(
             String url,
             String method,
-            String model,
             Long id
     );
 
-    Optional<Permission> findFirstByUrlAndMethodOrderByIdAsc(
+    Optional<Permission> findByUrlAndMethod(
             String url,
             String method
     );
@@ -31,6 +33,7 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
             JOIN rp.role r
             JOIN r.userRoles ur
             WHERE ur.user.id = :userId
+              AND ur.user.active = true
               AND UPPER(p.method) = UPPER(:method)
               AND p.url = :url
             """)
@@ -47,6 +50,8 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
             JOIN rp.role r
             JOIN r.userRoles ur
             WHERE ur.user.id = :userId
+              AND ur.user.active = true
+            ORDER BY p.url, p.method
             """)
     List<Permission> findAllByUserId(@Param("userId") Long userId);
 }

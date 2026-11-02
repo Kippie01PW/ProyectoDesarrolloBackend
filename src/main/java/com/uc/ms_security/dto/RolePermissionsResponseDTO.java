@@ -8,7 +8,10 @@ import java.util.List;
 public class RolePermissionsResponseDTO {
 
     Long id;
+
     String name;
+
     String description;
+
     List<RolePermissionResponseDTO> permissions;
 }

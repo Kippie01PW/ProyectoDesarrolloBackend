@@ -1,15 +1,12 @@
 package com.uc.ms_security.controller;
 
-import com.uc.ms_security.dto.user.CreateUserDTO;
-import com.uc.ms_security.dto.user.UpdateUserDTO;
-import com.uc.ms_security.dto.user.UserDetailResponseDTO;
-import com.uc.ms_security.dto.user.UserResponseDTO;
-import com.uc.ms_security.dto.user.UserSessionsResponseDTO;
-import com.uc.ms_security.dto.UserRolesResponseDTO;
+import com.uc.ms_security.dto.*;
 import com.uc.ms_security.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -22,8 +19,14 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponseDTO create(@Valid @RequestBody CreateUserDTO dto) {
-        return userService.create(dto);
+    public UserResponseDTO create(
+            @Valid @RequestBody CreateUserDTO dto,
+            @AuthenticationPrincipal Jwt jwt) {
+        // Sin sesión = autorregistro: recibe el rol inicial automáticamente.
+        // Con sesión (administrador) los roles los elige quien crea el usuario.
+        return jwt == null
+                ? userService.register(dto)
+                : userService.create(dto);
     }
 
     @GetMapping
@@ -35,25 +38,11 @@ public class UserController {
     public UserResponseDTO findById(@PathVariable Long id) {
         return userService.findById(id);
     }
+    @GetMapping("/{id}/profile")
+    public UserDetailResponseDTO findByIdAndProfile(
+            @PathVariable Long id) {
 
-    @GetMapping("/{id}/detail")
-    public UserDetailResponseDTO findByIdAndProfile(@PathVariable Long id) {
-        return userService.findByIdWithProfile(id);
-    }
-
-    @GetMapping("/{id}/detail-with-sessions")
-    public UserSessionsResponseDTO findByIdAndSessions(@PathVariable Long id) {
-        return userService.findByIdAndSessions(id);
-    }
-
-    @GetMapping("/{id}/detail-with-roles")
-    public UserRolesResponseDTO findByIdAndRoles(@PathVariable Long id) {
-        return userService.findByIdAndRoles(id);
-    }
-
-    @GetMapping("/available-for-role/{roleId}")
-    public List<UserResponseDTO> findAvailableForRole(@PathVariable Long roleId) {
-        return userService.findAvailableForRole(roleId);
+        return userService.findByIdAndProfile(id);
     }
 
     @PutMapping("/{id}")
@@ -63,9 +52,29 @@ public class UserController {
         return userService.update(id, dto);
     }
 
+    @PutMapping("/{id}/status")
+    public UserResponseDTO updateStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserStatusDTO dto) {
+        return userService.updateStatus(id, dto);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         userService.delete(id);
+    }
+
+    @GetMapping("/{id}/detail-with-sessions")
+    public UserSessionsResponseDTO findByIdAndSessions(@PathVariable Long id) {
+
+        return userService.findByIdAndSessions(id);
+    }
+
+    @GetMapping("/{id}/detail-with-roles")
+    public UserRolesResponseDTO findByIdAndRoles(
+            @PathVariable Long id) {
+
+        return userService.findByIdAndRoles(id);
     }
 }

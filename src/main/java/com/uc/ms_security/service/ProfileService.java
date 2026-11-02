@@ -1,7 +1,7 @@
 package com.uc.ms_security.service;
 
-import com.uc.ms_security.dto.profile.ProfileRequestDTO;
-import com.uc.ms_security.dto.profile.ProfileResponseDTO;
+import com.uc.ms_security.dto.ProfileRequestDTO;
+import com.uc.ms_security.dto.ProfileResponseDTO;
 import com.uc.ms_security.entity.Profile;
 import com.uc.ms_security.entity.User;
 import com.uc.ms_security.exception.ApplicationException;
@@ -23,12 +23,12 @@ public class ProfileService {
     public ProfileResponseDTO create(Long userId, ProfileRequestDTO dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApplicationException(
-                        ErrorCase.NOT_FOUND,
-                        "Usuario no encontrado con id: " + userId
+                    ErrorCase.NOT_FOUND,
+                    "Usuario no encontrado con id: " + userId
                 ));
 
         if (profileRepository.existsByUserId(userId)) {
-            throw new ApplicationException(
+                throw new ApplicationException(
                     ErrorCase.ALREADY_EXISTS,
                     "El usuario ya tiene un perfil"
             );
@@ -36,31 +36,41 @@ public class ProfileService {
 
         Profile profile = profileMapper.toEntity(dto);
         profile.setUser(user);
-        user.setProfile(profile);
+
         Profile savedProfile = profileRepository.save(profile);
         return profileMapper.toResponseDTO(savedProfile);
     }
 
-    private Profile findProfile(Long userId) {
-        return profileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ApplicationException(
-                        ErrorCase.NOT_FOUND,
-                        "Perfil no encontrado para el usuario con id: " + userId
-                ));
+    public ProfileResponseDTO update(Long userId, ProfileRequestDTO dto) {
+        Profile profile = findProfile(userId);
+
+        profileMapper.updateEntity(dto, profile);
+        Profile updatedProfile = profileRepository.save(profile);
+
+        return profileMapper.toResponseDTO(updatedProfile);
+    }
+
+    /** Crea el perfil si el usuario no tiene uno; si lo tiene, lo actualiza. */
+    public ProfileResponseDTO save(Long userId, ProfileRequestDTO dto) {
+        if (profileRepository.existsByUserId(userId)) {
+            return update(userId, dto);
+        }
+        return create(userId, dto);
     }
 
     public ProfileResponseDTO findByUserId(Long userId) {
         return profileMapper.toResponseDTO(findProfile(userId));
     }
 
-    public ProfileResponseDTO update(Long userId, ProfileRequestDTO dto) {
-        Profile profile = findProfile(userId);
-        profileMapper.updateEntity(dto, profile);
-        Profile updatedProfile = profileRepository.save(profile);
-        return profileMapper.toResponseDTO(updatedProfile);
-    }
-
     public void delete(Long userId) {
         profileRepository.delete(findProfile(userId));
+    }
+
+    private Profile findProfile(Long userId) {
+        return profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ApplicationException(
+                    ErrorCase.NOT_FOUND,
+                    "Perfil no encontrado para el usuario con id: " + userId
+                ));
     }
 }

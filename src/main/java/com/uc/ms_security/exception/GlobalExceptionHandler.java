@@ -1,8 +1,6 @@
 package com.uc.ms_security.exception;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -13,100 +11,84 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
     @ExceptionHandler(ApplicationException.class)
     public ResponseEntity<Map<String, String>> handleApplicationException(
-            ApplicationException exception,
-            HttpServletRequest request) {
-
-        if (exception.getErrorCase() == ErrorCase.INVALID_OPERATION
-                || exception.getErrorCase() == ErrorCase.UNAUTHORIZED) {
-            logger.warn(
-                    "Error de autenticación en {} {}: {}",
-                    request.getMethod(),
-                    request.getRequestURI(),
-                    exception.getMessage()
-            );
-        }
+            ApplicationException exception) {
 
         HttpStatus status = switch (exception.getErrorCase()) {
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
             case ALREADY_EXISTS -> HttpStatus.CONFLICT;
-            case INVALID_OPERATION -> HttpStatus.CONFLICT;
+            case INVALID_OPERATION -> HttpStatus.BAD_REQUEST;
             case UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;
-            case BAD_REQUEST -> HttpStatus.BAD_REQUEST;
+            case FORBIDDEN -> HttpStatus.FORBIDDEN;
+            case TOO_MANY_REQUESTS -> HttpStatus.TOO_MANY_REQUESTS;
+            case SERVICE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
         };
 
         Map<String, String> error = new LinkedHashMap<>();
         error.put("errorCase", exception.getErrorCase().name());
         error.put("message", exception.getMessage());
 
-        return ResponseEntity.status(status).body(error);
+        return ResponseEntity
+                .status(status)
+                .body(error);
     }
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, String>> handleResponseStatusException(
-            ResponseStatusException exception,
-            HttpServletRequest request) {
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception) {
 
-        if (exception.getStatusCode().is5xxServerError()) {
-            String errorId = UUID.randomUUID().toString();
-            logger.error(
-                    "Error HTTP {} [{}] en {} {}",
-                    exception.getStatusCode().value(),
-                    errorId,
-                    request.getMethod(),
-                    request.getRequestURI(),
-                    exception
-            );
-        }
+        Map<String, String> error = new LinkedHashMap<>();
+        error.put("errorCase", ErrorCase.ALREADY_EXISTS.name());
+        error.put("message", "El registro ya existe o viola una restricción de la base de datos");
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(error);
+    }
+
+        @ExceptionHandler(ResponseStatusException.class)
+        public ResponseEntity<Map<String, String>> handleResponseStatusException(
+            ResponseStatusException exception) {
 
         Map<String, String> error = new LinkedHashMap<>();
         error.put("errorCase", "HTTP_ERROR");
         error.put("message", exception.getReason());
 
-        return ResponseEntity.status(exception.getStatusCode()).body(error);
-    }
+        return ResponseEntity
+            .status(exception.getStatusCode())
+            .body(error);
+        }
+
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<Map<String, String>> handleUnexpectedException(
+            Exception exception) {
+
+        Map<String, String> error = new LinkedHashMap<>();
+        error.put("errorCase", "INTERNAL_ERROR");
+        error.put("message", "Ocurrió un error interno en el servidor");
+
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(error);
+        }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidation(
             MethodArgumentNotValidException exception) {
 
         Map<String, String> errors = new LinkedHashMap<>();
+
         for (FieldError error : exception.getBindingResult().getFieldErrors()) {
             errors.put(error.getField(), error.getDefaultMessage());
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleUnexpectedException(
-            Exception exception,
-            HttpServletRequest request) {
-
-        String errorId = UUID.randomUUID().toString();
-        logger.error(
-                "Error inesperado [{}] en {} {}. Tipo: {}",
-                errorId,
-                request.getMethod(),
-                request.getRequestURI(),
-                exception.getClass().getName(),
-                exception
-        );
-
-        Map<String, String> error = new LinkedHashMap<>();
-        error.put("errorCase", "INTERNAL_ERROR");
-        error.put("message", "Error interno del servidor. Consulta los logs con el identificador proporcionado.");
-        error.put("errorId", errorId);
-        error.put("path", request.getRequestURI());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(errors);
     }
 }

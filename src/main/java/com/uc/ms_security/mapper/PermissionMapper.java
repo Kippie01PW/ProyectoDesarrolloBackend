@@ -1,8 +1,7 @@
 package com.uc.ms_security.mapper;
 
-import com.uc.ms_security.dto.permission.CreatePermissionDTO;
-import com.uc.ms_security.dto.permission.PermissionResponseDTO;
-import com.uc.ms_security.dto.permission.UpdatePermissionDTO;
+import com.uc.ms_security.dto.PermissionRequestDTO;
+import com.uc.ms_security.dto.PermissionResponseDTO;
 import com.uc.ms_security.entity.Permission;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +10,7 @@ import java.util.List;
 @Component
 public class PermissionMapper {
 
-    public Permission toEntity(CreatePermissionDTO dto) {
+    public Permission toEntity(PermissionRequestDTO dto) {
         Permission permission = new Permission();
         permission.setUrl(dto.getUrl());
         permission.setMethod(dto.getMethod());
@@ -19,7 +18,10 @@ public class PermissionMapper {
         return permission;
     }
 
-    public void updateEntity(UpdatePermissionDTO dto, Permission permission) {
+    public void updateEntity(
+            PermissionRequestDTO dto,
+            Permission permission) {
+
         permission.setUrl(dto.getUrl());
         permission.setMethod(dto.getMethod());
         permission.setModel(dto.getModel());
@@ -34,7 +36,11 @@ public class PermissionMapper {
         );
     }
 
-    public List<PermissionResponseDTO> toResponseDTOList(List<Permission> permissions) {
-        return permissions.stream().map(this::toResponseDTO).toList();
+    public List<PermissionResponseDTO> toResponseDTOList(
+            List<Permission> permissions) {
+
+        return permissions.stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 }

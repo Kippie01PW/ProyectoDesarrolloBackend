@@ -1,7 +1,7 @@
 package com.uc.ms_security.controller;
 
-import com.uc.ms_security.dto.session.SessionRequestDTO;
-import com.uc.ms_security.dto.session.SessionResponseDTO;
+import com.uc.ms_security.dto.SessionRequestDTO;
+import com.uc.ms_security.dto.SessionResponseDTO;
 import com.uc.ms_security.service.SessionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +22,14 @@ public class SessionController {
     public SessionResponseDTO create(
             @PathVariable Long userId,
             @Valid @RequestBody SessionRequestDTO dto) {
+
         return sessionService.create(userId, dto);
     }
 
     @GetMapping
-    public List<SessionResponseDTO> findAll(@PathVariable Long userId) {
+    public List<SessionResponseDTO> findAll(
+            @PathVariable Long userId) {
+
         return sessionService.findAllByUserId(userId);
     }
 
@@ -34,6 +37,7 @@ public class SessionController {
     public SessionResponseDTO findById(
             @PathVariable Long userId,
             @PathVariable Long sessionId) {
+
         return sessionService.findById(userId, sessionId);
     }
 
@@ -42,7 +46,12 @@ public class SessionController {
             @PathVariable Long userId,
             @PathVariable Long sessionId,
             @Valid @RequestBody SessionRequestDTO dto) {
-        return sessionService.update(userId, sessionId, dto);
+
+        return sessionService.update(
+                userId,
+                sessionId,
+                dto
+        );
     }
 
     @DeleteMapping("/{sessionId}")
@@ -50,6 +59,7 @@ public class SessionController {
     public void delete(
             @PathVariable Long userId,
             @PathVariable Long sessionId) {
+
         sessionService.delete(userId, sessionId);
     }
 }

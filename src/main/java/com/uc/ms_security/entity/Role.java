@@ -16,18 +16,33 @@ import java.util.List;
 public class Role {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(
+            strategy = GenerationType.IDENTITY
+    )
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(
+            nullable = false,
+            unique = true,
+            length = 50
+    )
     private String name;
 
-    @Column(nullable = false, length = 255)
+    @Column(
+            nullable = false,
+            length = 255
+    )
     private String description;
 
-    @OneToMany(mappedBy = "role", fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "role",
+            fetch = FetchType.LAZY
+    )
     private List<UserRole> userRoles = new ArrayList<>();
 
-    @OneToMany(mappedBy = "role", fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "role",
+            fetch = FetchType.LAZY
+    )
     private List<RolePermission> rolePermissions = new ArrayList<>();
 }

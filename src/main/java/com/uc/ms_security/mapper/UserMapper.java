@@ -1,11 +1,6 @@
 package com.uc.ms_security.mapper;
 
-import com.uc.ms_security.dto.user.CreateUserDTO;
-import com.uc.ms_security.dto.user.UpdateUserDTO;
-import com.uc.ms_security.dto.user.UserDetailResponseDTO;
-import com.uc.ms_security.dto.user.UserResponseDTO;
-import com.uc.ms_security.dto.user.UserSessionsResponseDTO;
-import com.uc.ms_security.dto.UserRolesResponseDTO;
+import com.uc.ms_security.dto.*;
 import com.uc.ms_security.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -20,22 +15,23 @@ public class UserMapper {
     private final SessionMapper sessionMapper;
     private final UserRoleMapper userRoleMapper;
 
-    public User toEntity(CreateUserDTO dto, String encodedPassword) {
-        User user = new User();
+    public User toEntity(
+            CreateUserDTO dto,
+            String encodedPassword) {
 
+        User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
         user.setPassword(encodedPassword);
-
         return user;
     }
 
-    public void updateBasicData(UpdateUserDTO dto, User user) {
+    public void updateBasicData(
+            UpdateUserDTO dto,
+            User user) {
+
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
-        if (dto.getEnabled() != null) {
-            user.setEnabled(dto.getEnabled());
-        }
     }
 
     public UserResponseDTO toResponseDTO(User user) {
@@ -43,7 +39,7 @@ public class UserMapper {
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
-                user.isEnabled()
+                user.isActive()
         );
     }
 

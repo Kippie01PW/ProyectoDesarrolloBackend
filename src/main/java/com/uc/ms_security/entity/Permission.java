@@ -11,10 +11,12 @@ import java.util.List;
 @Entity
 @Table(
         name = "permissions",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_permission_url_method_model",
-                columnNames = {"url", "method", "model"}
-        )
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_permission_url_method",
+                        columnNames = {"url", "method"}
+                )
+        }
 )
 @Getter
 @Setter
@@ -22,18 +24,32 @@ import java.util.List;
 public class Permission {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(
+            strategy = GenerationType.IDENTITY
+    )
     private Long id;
 
-    @Column(nullable = false, length = 255)
+    @Column(
+            nullable = false,
+            length = 255
+    )
     private String url;
 
-    @Column(nullable = false, length = 20)
+    @Column(
+            nullable = false,
+            length = 10
+    )
     private String method;
 
-    @Column(nullable = false, length = 100)
+    @Column(
+            nullable = false,
+            length = 255
+    )
     private String model;
 
-    @OneToMany(mappedBy = "permission", fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "permission",
+            fetch = FetchType.LAZY
+    )
     private List<RolePermission> rolePermissions = new ArrayList<>();
 }

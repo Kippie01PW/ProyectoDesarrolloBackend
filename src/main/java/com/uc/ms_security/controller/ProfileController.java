@@ -1,7 +1,7 @@
 package com.uc.ms_security.controller;
 
-import com.uc.ms_security.dto.profile.ProfileRequestDTO;
-import com.uc.ms_security.dto.profile.ProfileResponseDTO;
+import com.uc.ms_security.dto.ProfileRequestDTO;
+import com.uc.ms_security.dto.ProfileResponseDTO;
 import com.uc.ms_security.service.ProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,10 +23,6 @@ public class ProfileController {
         return profileService.create(userId, dto);
     }
 
-    @GetMapping
-    public ProfileResponseDTO findByUserId(@PathVariable Long userId) {
-        return profileService.findByUserId(userId);
-    }
 
     @PutMapping
     public ProfileResponseDTO update(

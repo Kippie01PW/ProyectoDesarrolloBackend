@@ -28,16 +28,28 @@ public class RolePermissionService {
     private final RolePermissionMapper rolePermissionMapper;
 
     @Transactional
-    public RolePermissionResponseDTO assign(AssignPermissionRequestDTO dto) {
-        Role role = roleRepository.findById(dto.getRoleId())
-                .orElseThrow(() -> new ApplicationException(
-                        ErrorCase.NOT_FOUND, "Rol no encontrado"));
-        Permission permission = permissionRepository.findById(dto.getPermissionId())
-                .orElseThrow(() -> new ApplicationException(
-                        ErrorCase.NOT_FOUND, "Permiso no encontrado"));
+    public RolePermissionResponseDTO assign(
+            AssignPermissionRequestDTO dto) {
 
-        if (rolePermissionRepository.countByRoleIdAndPermissionId(
-                dto.getRoleId(), dto.getPermissionId()) > 0) {
+        Role role = roleRepository.findById(dto.getRoleId())
+                .orElseThrow(
+                        () -> new ApplicationException(
+                                ErrorCase.NOT_FOUND,
+                                "Rol no encontrado"
+                        )
+                );
+
+        Permission permission = permissionRepository.findById(dto.getPermissionId())
+                .orElseThrow(
+                        () -> new ApplicationException(
+                                ErrorCase.NOT_FOUND,
+                                "Permiso no encontrado"
+                        )
+                );
+
+        if (rolePermissionRepository.existsByRoleIdAndPermissionId(
+                dto.getRoleId(),
+                dto.getPermissionId())) {
             throw new ApplicationException(
                     ErrorCase.ALREADY_EXISTS,
                     "El rol ya tiene asignado ese permiso"
@@ -47,36 +59,47 @@ public class RolePermissionService {
         RolePermission rolePermission = new RolePermission();
         rolePermission.setRole(role);
         rolePermission.setPermission(permission);
-        return rolePermissionMapper.toResponseDTO(rolePermissionRepository.save(rolePermission));
+
+        return rolePermissionMapper.toResponseDTO(
+                rolePermissionRepository.save(rolePermission)
+        );
     }
 
     @Transactional(readOnly = true)
     public List<RolePermissionResponseDTO> findAll() {
-        return rolePermissionMapper.toResponseDTOList(rolePermissionRepository.findAll());
+        return rolePermissionMapper.toResponseDTOList(
+                rolePermissionRepository.findAll()
+        );
     }
 
     @Transactional(readOnly = true)
     public List<RolePermissionResponseDTO> findByRoleId(Long roleId) {
         return rolePermissionMapper.toResponseDTOList(
-                rolePermissionRepository.findAllByRoleId(roleId));
+                rolePermissionRepository.findAllByRoleId(roleId)
+        );
     }
 
     @Transactional(readOnly = true)
     public List<PermissionRoleResponseDTO> findByPermissionId(Long permissionId) {
         return rolePermissionMapper.toPermissionRoleResponseDTOList(
-                rolePermissionRepository.findAllByPermissionId(permissionId));
+                rolePermissionRepository.findAllByPermissionId(permissionId)
+        );
     }
 
     @Transactional
     public void delete(Long roleId, Long permissionId) {
-        rolePermissionRepository.delete(findAssignment(roleId, permissionId));
+        RolePermission rolePermission = findAssignment(roleId, permissionId);
+
+        rolePermissionRepository.delete(rolePermission);
     }
 
     private RolePermission findAssignment(Long roleId, Long permissionId) {
         return rolePermissionRepository.findByRoleIdAndPermissionId(roleId, permissionId)
-                .orElseThrow(() -> new ApplicationException(
-                        ErrorCase.NOT_FOUND,
-                        "Asignación de permiso no encontrada"
-                ));
+                .orElseThrow(
+                        () -> new ApplicationException(
+                                ErrorCase.NOT_FOUND,
+                                "Asignación de permiso no encontrada"
+                        )
+                );
     }
 }

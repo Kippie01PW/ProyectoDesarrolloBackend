@@ -1,8 +1,7 @@
 package com.uc.ms_security.service;
 
-import com.uc.ms_security.dto.permission.CreatePermissionDTO;
-import com.uc.ms_security.dto.permission.PermissionResponseDTO;
-import com.uc.ms_security.dto.permission.UpdatePermissionDTO;
+import com.uc.ms_security.dto.PermissionRequestDTO;
+import com.uc.ms_security.dto.PermissionResponseDTO;
 import com.uc.ms_security.entity.Permission;
 import com.uc.ms_security.exception.ApplicationException;
 import com.uc.ms_security.exception.ErrorCase;
@@ -11,99 +10,142 @@ import com.uc.ms_security.repository.PermissionRepository;
 import com.uc.ms_security.repository.RolePermissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class PermissionService {
 
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final PermissionMapper permissionMapper;
 
-    public PermissionResponseDTO create(CreatePermissionDTO dto) {
-        String method = normalizeMethod(dto.getMethod());
-        ensureUnique(dto.getUrl(), method, dto.getModel(), null);
-        dto.setMethod(method);
+    public boolean hasPermission(
+            Long userId,
+            String httpMethod,
+            String requestUrl) {
+
+        String normalizedUrl = normalizeUrl(requestUrl);
+
+        return permissionRepository
+                .findByUserIdAndMethodAndUrl(
+                        userId,
+                        httpMethod.toUpperCase(Locale.ROOT),
+                        normalizedUrl
+                )
+                .stream()
+                .findAny()
+                .isPresent();
+    }
+
+    public PermissionResponseDTO create(PermissionRequestDTO dto) {
+        normalize(dto);
+
+        if (permissionRepository.existsByUrlAndMethod(
+                dto.getUrl(), dto.getMethod())) {
+            throw new ApplicationException(
+                    ErrorCase.ALREADY_EXISTS,
+                    "Ya existe un permiso con esa url y método"
+            );
+        }
+
         Permission permission = permissionMapper.toEntity(dto);
-        return permissionMapper.toResponseDTO(permissionRepository.save(permission));
+
+        return permissionMapper.toResponseDTO(
+                permissionRepository.save(permission)
+        );
     }
 
-    @Transactional(readOnly = true)
     public List<PermissionResponseDTO> findAll() {
-        return permissionMapper.toResponseDTOList(permissionRepository.findAll());
+        return permissionMapper.toResponseDTOList(
+                permissionRepository.findAll()
+        );
     }
 
-    @Transactional(readOnly = true)
     public PermissionResponseDTO findById(Long id) {
-        return permissionMapper.toResponseDTO(findPermission(id));
+        return permissionMapper.toResponseDTO(
+                findEntityById(id)
+        );
     }
 
-    public PermissionResponseDTO update(Long id, UpdatePermissionDTO dto) {
-        Permission permission = findPermission(id);
-        String method = normalizeMethod(dto.getMethod());
-        ensureUnique(dto.getUrl(), method, dto.getModel(), id);
-        dto.setMethod(method);
+    public PermissionResponseDTO update(
+            Long id,
+            PermissionRequestDTO dto) {
+
+        Permission permission = findEntityById(id);
+
+        normalize(dto);
+
+        if (permissionRepository.existsByUrlAndMethodAndIdNot(
+                dto.getUrl(), dto.getMethod(), id)) {
+            throw new ApplicationException(
+                    ErrorCase.ALREADY_EXISTS,
+                    "Ya existe un permiso con esa url y método"
+            );
+        }
+
         permissionMapper.updateEntity(dto, permission);
-        return permissionMapper.toResponseDTO(permissionRepository.save(permission));
+
+        return permissionMapper.toResponseDTO(
+                permissionRepository.save(permission)
+        );
     }
 
     public void delete(Long id) {
-        Permission permission = findPermission(id);
+        Permission permission = findEntityById(id);
+
         if (rolePermissionRepository.existsByPermissionId(id)) {
             throw new ApplicationException(
                     ErrorCase.INVALID_OPERATION,
                     "No se puede eliminar un permiso que está asignado"
             );
         }
+
         permissionRepository.delete(permission);
     }
 
-    private void ensureUnique(String url, String method, String model, Long excludedId) {
-        boolean exists = excludedId == null
-                ? permissionRepository.existsByUrlAndMethodAndModel(url, method, model)
-                : permissionRepository.existsByUrlAndMethodAndModelAndIdNot(
-                        url,
-                        method,
-                        model,
-                        excludedId
-                );
-        if (exists) {
-            throw new ApplicationException(
-                    ErrorCase.ALREADY_EXISTS,
-                    "Ya existe un permiso con esta URL, método y modelo"
-            );
+    /**
+     * Deja el método y la URL en la forma que usa el autorizador (método en
+     * mayúsculas y parámetros de ruta como {id}), de modo que dos permisos
+     * equivalentes sean el mismo y todo permiso guardado pueda coincidir con
+     * una petición real.
+     */
+    private void normalize(PermissionRequestDTO dto) {
+        dto.setMethod(dto.getMethod().trim().toUpperCase(Locale.ROOT));
+
+        String url = dto.getUrl().trim();
+        if (url.length() > 1 && url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
         }
+
+        String[] segments = url.split("/", -1);
+        for (int index = 0; index < segments.length; index++) {
+            String segment = segments[index];
+            boolean isPathParameter = segment.matches("\\{[^}]*}")
+                    || segment.matches(":[A-Za-z_]\\w*");
+            if (isPathParameter) {
+                segments[index] = "{id}";
+            }
+        }
+        dto.setUrl(String.join("/", segments));
     }
 
-    private Permission findPermission(Long id) {
+    private Permission findEntityById(Long id) {
         return permissionRepository.findById(id)
-                .orElseThrow(() -> new ApplicationException(
-                        ErrorCase.NOT_FOUND,
-                        "Permiso no encontrado con id: " + id
-                ));
+                .orElseThrow(
+                        () -> new ApplicationException(
+                                ErrorCase.NOT_FOUND,
+                                "Permiso no encontrado"
+                        )
+                );
     }
 
-    public boolean hasPermission(Long userId, String httpMethod, String requestUrl) {
-        String normalizedUrl = normalizeUrl(requestUrl);
-        return !permissionRepository.findByUserIdAndMethodAndUrl(
-                userId,
-                normalizeMethod(httpMethod),
-                normalizedUrl
-        ).isEmpty();
-    }
-
-    private String normalizeUrl(String requestUrl) {
-        return requestUrl.replaceAll(
-                "(?i)(?<=/)(?:\\d+|[a-f0-9]{24})(?=/|$)",
-                "{id}"
-        );
-    }
-
-    private String normalizeMethod(String method) {
-        return method.toUpperCase(Locale.ROOT);
-    }
+        private String normalizeUrl(String requestUrl) {
+                return requestUrl.replaceAll(
+                                "(?i)(?<=/)(?:\\d+|[a-f0-9]{24})(?=/|$)",
+                                "{id}"
+                );
+        }
 }

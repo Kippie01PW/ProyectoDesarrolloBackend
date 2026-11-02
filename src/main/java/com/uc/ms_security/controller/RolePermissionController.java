@@ -22,6 +22,7 @@ public class RolePermissionController {
     @ResponseStatus(HttpStatus.CREATED)
     public RolePermissionResponseDTO assign(
             @Valid @RequestBody AssignPermissionRequestDTO dto) {
+
         return rolePermissionService.assign(dto);
     }
 
@@ -31,19 +32,25 @@ public class RolePermissionController {
     }
 
     @GetMapping("/roles/{roleId}")
-    public List<RolePermissionResponseDTO> findByRoleId(@PathVariable Long roleId) {
+    public List<RolePermissionResponseDTO> findByRoleId(
+            @PathVariable Long roleId) {
+
         return rolePermissionService.findByRoleId(roleId);
     }
 
     @GetMapping("/permissions/{permissionId}")
     public List<PermissionRoleResponseDTO> findByPermissionId(
             @PathVariable Long permissionId) {
+
         return rolePermissionService.findByPermissionId(permissionId);
     }
 
     @DeleteMapping("/{roleId}/{permissionId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long roleId, @PathVariable Long permissionId) {
+    public void delete(
+            @PathVariable Long roleId,
+            @PathVariable Long permissionId) {
+
         rolePermissionService.delete(roleId, permissionId);
     }
 }

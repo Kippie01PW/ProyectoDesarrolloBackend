@@ -1,22 +1,33 @@
 package com.uc.ms_security.repository;
 
 import com.uc.ms_security.entity.PasswordResetToken;
-import org.springframework.data.jpa.repository.EntityGraph;   
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
-import java.util.List;                                          
 import java.util.Optional;
 
-public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
+public interface PasswordResetTokenRepository
+        extends JpaRepository<PasswordResetToken, Long> {
 
-    Optional<PasswordResetToken> findByTokenAndUsedFalseAndExpirationAfter(
-            String token, LocalDateTime now);
-
-    //busca solo por el token; el service decide si es válido
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"user"})
-    Optional<PasswordResetToken> findByToken(String token);
+    @Query("select t from PasswordResetToken t where t.tokenHash = :tokenHash")
+    Optional<PasswordResetToken> findForReset(
+            @Param("tokenHash") String tokenHash
+    );
 
-    //tokens aún sin usar de un usuario, para invalidarlos
-    List<PasswordResetToken> findAllByUserIdAndUsedFalse(Long userId);
+    @Modifying
+    @Query("update PasswordResetToken t set t.consumed = true "
+            + "where t.user.id = :userId and t.consumed = false")
+    int invalidatePendingByUserId(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("delete from PasswordResetToken t where t.expiresAt < :cutoff")
+    int deleteExpiredBefore(@Param("cutoff") LocalDateTime cutoff);
 }

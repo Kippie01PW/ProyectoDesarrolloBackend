@@ -6,8 +6,12 @@ import java.util.List;
 
 @Value
 public class UserRolesResponseDTO {
+
     Long id;
+
     String name;
+
     String email;
+
     List<UserRoleResponseDTO> roles;
 }

@@ -1,246 +1,170 @@
 package com.uc.ms_security.service;
 
-import com.uc.ms_security.dto.auth.AuthResponseDTO;
-import com.uc.ms_security.dto.auth.FirebaseLoginRequestDTO;
-import com.uc.ms_security.dto.auth.LoginRequestDTO;
-import com.uc.ms_security.dto.auth.PasswordRecoveryRequestDTO;
-import com.uc.ms_security.dto.auth.PasswordResetRequestDTO;
-import com.uc.ms_security.dto.auth.TwoFactorVerifyRequestDTO;
-import com.uc.ms_security.entity.PasswordResetToken;
-import com.uc.ms_security.entity.Session;
+import com.uc.ms_security.dto.AuthResponseDTO;
+import com.uc.ms_security.dto.CurrentUserResponseDTO;
+import com.uc.ms_security.dto.LoginRequestDTO;
+import com.uc.ms_security.entity.AuthMethod;
+import com.uc.ms_security.entity.Profile;
 import com.uc.ms_security.entity.User;
 import com.uc.ms_security.exception.ApplicationException;
 import com.uc.ms_security.exception.ErrorCase;
+import com.uc.ms_security.mapper.PermissionMapper;
+import com.uc.ms_security.repository.PermissionRepository;
 import com.uc.ms_security.repository.UserRepository;
-import com.uc.ms_security.repository.PasswordResetTokenRepository;
-import com.uc.ms_security.repository.SessionRepository;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.FirebaseToken;
-import com.google.firebase.FirebaseApp;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.security.SecureRandom;
-import java.util.UUID;
+import java.time.Duration;
+import java.util.Locale;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
-    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
+    private static final int MAX_LOGIN_ATTEMPTS = 8;
+    private static final Duration LOGIN_WINDOW = Duration.ofMinutes(10);
+    private static final int MAX_VERIFY_ATTEMPTS_PER_IP = 20;
 
     private final UserRepository userRepository;
+    private final PermissionRepository permissionRepository;
+    private final PermissionMapper permissionMapper;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final SessionRepository sessionRepository;
-    private final PasswordResetTokenRepository passwordResetTokenRepository;
-    private final NotificationService notificationService;
-    private final ObjectProvider<FirebaseApp> firebaseAppProvider;
+    private final AuthSessionService authSessionService;
+    private final TwoFactorService twoFactorService;
+    private final RateLimiter rateLimiter;
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    /** Hash de relleno para que un correo inexistente cueste lo mismo que uno real. */
+    private final String dummyHash;
 
-    @Value("${security.2fa.code-duration-minutes:10}")
-    private long twoFactorDurationMinutes;
+    public AuthService(
+            UserRepository userRepository,
+            PermissionRepository permissionRepository,
+            PermissionMapper permissionMapper,
+            PasswordEncoder passwordEncoder,
+            AuthSessionService authSessionService,
+            TwoFactorService twoFactorService,
+            RateLimiter rateLimiter) {
+        this.userRepository = userRepository;
+        this.permissionRepository = permissionRepository;
+        this.permissionMapper = permissionMapper;
+        this.passwordEncoder = passwordEncoder;
+        this.authSessionService = authSessionService;
+        this.twoFactorService = twoFactorService;
+        this.rateLimiter = rateLimiter;
+        this.dummyHash = passwordEncoder.encode("no-es-una-contraseña-real");
+    }
 
-    @Value("${security.password-reset-duration-minutes:30}")
-    private long passwordResetDurationMinutes;
+    /**
+     * Paso 1 del acceso con contraseña. Si el usuario tiene el segundo factor
+     * activo solo se verifican las credenciales y se devuelve un desafío (sin
+     * sesión); en otro caso se crea la sesión.
+     */
+    public AuthResponseDTO login(LoginRequestDTO dto, String clientIp) {
+        String email = dto.getEmail() == null
+                ? "" : dto.getEmail().trim().toLowerCase(Locale.ROOT);
+        String rateKey = "login|" + email + "|" + clientIp;
 
-    public AuthResponseDTO login(LoginRequestDTO dto) {
-        User user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(this::unauthorized);
+        rateLimiter.check(rateKey, MAX_LOGIN_ATTEMPTS, LOGIN_WINDOW);
 
-        if (!"LOCAL".equals(user.getAuthProvider())
-                || !user.isEnabled()
-                || user.getPassword() == null
-                || !passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        boolean validPassword = passwordEncoder.matches(
+                dto.getPassword(),
+                user != null ? user.getPassword() : dummyHash
+        );
+
+        if (user == null || !validPassword || user.getAuthMethod() != AuthMethod.LOCAL) {
+            log.info("Intento de acceso fallido");
             throw unauthorized();
         }
+
+        if (!user.isActive()) {
+            log.info("Acceso rechazado: cuenta deshabilitada (usuario {})", user.getId());
+            throw new ApplicationException(
+                    ErrorCase.FORBIDDEN,
+                    "El usuario está desactivado"
+            );
+        }
+
+        rateLimiter.reset(rateKey);
 
         if (user.isTwoFactorEnabled()) {
-            return createTwoFactorChallenge(user);
+            return twoFactorService.start(user);
         }
-        return createActiveSession(user);
+
+        return authSessionService.start(user);
     }
 
-    public AuthResponseDTO verifyTwoFactor(TwoFactorVerifyRequestDTO dto) {
-        Session session = sessionRepository.findByToken(dto.challengeToken())
-                .orElseThrow(() -> new ApplicationException(
-                        ErrorCase.UNAUTHORIZED,
-                        "La sesión de verificación ya no es válida"));
-        LocalDateTime now = LocalDateTime.now();
-        if (session.isActive()) {
-            throw new ApplicationException(
-                    ErrorCase.UNAUTHORIZED,
-                    "Este código ya fue utilizado. Inicia sesión nuevamente");
-        }
-        if (session.getCode2FAExpiration() == null
-                || session.getCode2FAExpiration().isBefore(now)) {
-            throw new ApplicationException(
-                    ErrorCase.UNAUTHORIZED,
-                    "El código de verificación expiró. Inicia sesión nuevamente");
-        }
-        if (!passwordEncoder.matches(dto.code(), session.getCode2FAHash())) {
-            throw new ApplicationException(
-                    ErrorCase.UNAUTHORIZED,
-                    "El código de verificación es incorrecto");
-        }
-        session.setActive(true);
-        session.setCode2FAHash(null);
-        session.setCode2FA(null);
-        session.setCode2FAExpiration(null);
-        AuthResponseDTO response = createTokenResponse(session.getUser());
-        session.setToken(response.accessToken());
-        session.setExpiration(response.expiresAt().atOffset(ZoneOffset.UTC).toLocalDateTime());
-        sessionRepository.save(session);
-        return response;
+    /** Paso 2: el acceso solo se completa con el código correcto. */
+    public AuthResponseDTO verifyTwoFactor(
+            String challengeId,
+            String code,
+            String clientIp) {
+
+        rateLimiter.check("2fa|" + clientIp,
+                MAX_VERIFY_ATTEMPTS_PER_IP, LOGIN_WINDOW);
+
+        return twoFactorService.verify(challengeId, code);
     }
 
-    public AuthResponseDTO firebaseLogin(FirebaseLoginRequestDTO dto) {
-        FirebaseApp firebaseApp = firebaseAppProvider.getIfAvailable();
-        if (firebaseApp == null) {
-            logger.error("Se intentó autenticar con Firebase, pero Firebase Admin SDK no está configurado");
-            throw new ApplicationException(ErrorCase.INVALID_OPERATION,
-                    "La autenticación Firebase no está configurada");
-        }
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance(firebaseApp)
-                    .verifyIdToken(dto.idToken());
-            String email = token.getEmail();
-            if (email == null || email.isBlank()) {
-                throw unauthorized();
-            }
-            if (!isEmailVerified(token)) {
-                throw new ApplicationException(
-                        ErrorCase.UNAUTHORIZED,
-                        "El correo del proveedor no está verificado");
-            }
-            User user = userRepository.findByProviderSubject(token.getUid()).orElse(null);
-            if (user == null) {
-                user = userRepository.findByEmail(email).orElse(null);
-                if (user == null) {
-                    user = new User();
-                    user.setEmail(email);
-                    user.setName(token.getName() == null ? email : token.getName());
-                    user.setAuthProvider("FIREBASE");
-                } else if ("LOCAL".equals(user.getAuthProvider())) {
-                    throw new ApplicationException(
-                            ErrorCase.UNAUTHORIZED,
-                            "El correo ya está registrado con autenticación local");
-                }
-                user.setProviderSubject(token.getUid());
-                if (!"LOCAL".equals(user.getAuthProvider())) {
-                    user.setAuthProvider("FIREBASE");
-                    user.setPassword(null);
-                }
-                user = userRepository.save(user);
-            }
-            if (!user.isEnabled()) {
-                throw unauthorized();
-            }
-            return createActiveSession(user);
-        } catch (FirebaseAuthException | IllegalArgumentException exception) {
-            logger.warn("Token Firebase rechazado: {}", exception.getMessage());
-            throw unauthorized();
-        } catch (RuntimeException exception) {
-            logger.error("Error procesando el login OAuth de Firebase", exception);
-            throw exception;
-        }
-    }
-
-    private boolean isEmailVerified(FirebaseToken token) {
-        Object verified = token.getClaims().get("email_verified");
-        return Boolean.TRUE.equals(verified);
-    }
-
-    public void requestPasswordRecovery(PasswordRecoveryRequestDTO dto) {
-        User user = userRepository.findByEmail(dto.email())
+    @Transactional
+    public void setTwoFactorEnabled(Long userId, boolean enabled) {
+        User user = userRepository.findById(userId)
+                .filter(User::isActive)
                 .orElseThrow(this::unauthorized);
-        if (!"LOCAL".equals(user.getAuthProvider())) {
-            throw new ApplicationException(ErrorCase.INVALID_OPERATION,
-                    "Los usuarios OAuth deben recuperar su cuenta con el proveedor");
+
+        if (user.getAuthMethod() != AuthMethod.LOCAL) {
+            throw new ApplicationException(
+                    ErrorCase.INVALID_OPERATION,
+                    "El segundo factor solo aplica al acceso con correo y contraseña"
+            );
         }
-        PasswordResetToken reset = new PasswordResetToken();
-        reset.setToken(UUID.randomUUID().toString());
-        reset.setExpiration(LocalDateTime.now().plusMinutes(passwordResetDurationMinutes));
-        reset.setUser(user);
-        reset.setUsed(false);
-        passwordResetTokenRepository.save(reset);
-        notificationService.sendEmail(user.getEmail(), "Recuperación de contraseña",
-                "Use este token antes de " + reset.getExpiration() + ": " + reset.getToken());
-    }
 
-    public void resetPassword(PasswordResetRequestDTO dto) {
-        PasswordResetToken reset = passwordResetTokenRepository
-                .findByTokenAndUsedFalseAndExpirationAfter(dto.token(), LocalDateTime.now())
-                .orElseThrow(this::unauthorized);
-        User user = reset.getUser();
-        user.setPassword(passwordEncoder.encode(dto.newPassword()));
-        userRepository.save(user);
-        sessionRepository.deleteAllByUserId(user.getId());
-        reset.setUsed(true);
-        passwordResetTokenRepository.save(reset);
-    }
-
-    public void logout(String token) {
-        sessionRepository.findByToken(token).ifPresent(session -> {
-            session.setActive(false);
-            sessionRepository.save(session);
-        });
-    }
-
-    public void setTwoFactor(Long userId, boolean enabled) {
-        User user = userRepository.findById(userId).orElseThrow(this::unauthorized);
-        if (!"LOCAL".equals(user.getAuthProvider())) {
-            throw new ApplicationException(ErrorCase.INVALID_OPERATION,
-                    "El segundo factor interno solo aplica a usuarios locales");
-        }
         user.setTwoFactorEnabled(enabled);
         userRepository.save(user);
     }
 
-    private AuthResponseDTO createTwoFactorChallenge(User user) {
-        String challengeToken = UUID.randomUUID().toString();
-        String code = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
-        Session session = new Session();
-        session.setToken(challengeToken);
-        session.setExpiration(LocalDateTime.now().plusMinutes(twoFactorDurationMinutes));
-        session.setCode2FAHash(passwordEncoder.encode(code));
-        session.setCode2FAExpiration(session.getExpiration());
-        session.setUser(user);
-        session.setActive(false);
-        sessionRepository.save(session);
-        notificationService.sendEmail(user.getEmail(), "Código de autenticación",
-                "Su código de autenticación es: " + code);
-        return AuthResponseDTO.challenge(challengeToken,
-                session.getExpiration().toInstant(ZoneOffset.UTC));
+    public void logout(String jti, Long userId) {
+        authSessionService.revoke(jti, userId);
     }
 
-    private AuthResponseDTO createActiveSession(User user) {
-        AuthResponseDTO response = createTokenResponse(user);
-        Session session = new Session();
-        session.setToken(response.accessToken());
-        session.setExpiration(response.expiresAt().atOffset(ZoneOffset.UTC).toLocalDateTime());
-        session.setUser(user);
-        session.setActive(true);
-        sessionRepository.save(session);
-        return response;
-    }
+    /**
+     * Identidad del usuario del token con sus roles y permisos efectivos.
+     * No pasa por la autorización dinámica: cualquier usuario activo puede
+     * consultarse a sí mismo, aunque su rol no tenga ningún permiso.
+     */
+    @Transactional(readOnly = true)
+    public CurrentUserResponseDTO currentUser(Long userId) {
+        User user = userRepository.findWithRolesById(userId)
+                .filter(User::isActive)
+                .orElseThrow(this::unauthorized);
 
-    private AuthResponseDTO createTokenResponse(User user) {
-        return jwtService.generateToken(user);
+        Profile profile = user.getProfile();
+
+        return new CurrentUserResponseDTO(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                profile != null ? profile.getPhotoUrl() : null,
+                user.getUserRoles().stream()
+                        .map(userRole -> userRole.getRole().getName())
+                        .toList(),
+                permissionMapper.toResponseDTOList(
+                        permissionRepository.findAllByUserId(userId)
+                ),
+                user.isTwoFactorEnabled(),
+                user.getAuthMethod().name()
+        );
     }
 
     private ApplicationException unauthorized() {
         return new ApplicationException(
                 ErrorCase.UNAUTHORIZED,
-                "Credenciales incorrectas");
+                "Credenciales incorrectas"
+        );
     }
 }

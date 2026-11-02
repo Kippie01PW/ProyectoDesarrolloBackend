@@ -1,7 +1,7 @@
 package com.uc.ms_security.mapper;
 
-import com.uc.ms_security.dto.RoleRequestDTO;
 import com.uc.ms_security.dto.RolePermissionsResponseDTO;
+import com.uc.ms_security.dto.RoleRequestDTO;
 import com.uc.ms_security.dto.RoleResponseDTO;
 import com.uc.ms_security.entity.Role;
 import lombok.RequiredArgsConstructor;
@@ -22,17 +22,28 @@ public class RoleMapper {
         return role;
     }
 
-    public void updateEntity(RoleRequestDTO dto, Role role) {
+    public void updateEntity(
+            RoleRequestDTO dto,
+            Role role) {
+
         role.setName(dto.getName());
         role.setDescription(dto.getDescription());
     }
 
     public RoleResponseDTO toResponseDTO(Role role) {
-        return new RoleResponseDTO(role.getId(), role.getName(), role.getDescription());
+        return new RoleResponseDTO(
+                role.getId(),
+                role.getName(),
+                role.getDescription()
+        );
     }
 
-    public List<RoleResponseDTO> toResponseDTOList(List<Role> roles) {
-        return roles.stream().map(this::toResponseDTO).toList();
+    public List<RoleResponseDTO> toResponseDTOList(
+            List<Role> roles) {
+
+        return roles.stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 
     public RolePermissionsResponseDTO toPermissionsResponseDTO(Role role) {
@@ -40,7 +51,9 @@ public class RoleMapper {
                 role.getId(),
                 role.getName(),
                 role.getDescription(),
-                rolePermissionMapper.toResponseDTOList(role.getRolePermissions())
+                rolePermissionMapper.toResponseDTOList(
+                        role.getRolePermissions()
+                )
         );
     }
 }

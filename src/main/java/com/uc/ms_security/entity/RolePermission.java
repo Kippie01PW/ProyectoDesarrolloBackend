@@ -8,10 +8,12 @@ import lombok.Setter;
 @Entity
 @Table(
         name = "role_permissions",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_role_permission",
-                columnNames = {"role_id", "permission_id"}
-        )
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_role_permission",
+                        columnNames = {"role_id", "permission_id"}
+                )
+        }
 )
 @Getter
 @Setter
@@ -19,14 +21,28 @@ import lombok.Setter;
 public class RolePermission {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(
+            strategy = GenerationType.IDENTITY
+    )
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "role_id", nullable = false)
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
+    @JoinColumn(
+            name = "role_id",
+            nullable = false
+    )
     private Role role;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "permission_id", nullable = false)
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
+    @JoinColumn(
+            name = "permission_id",
+            nullable = false
+    )
     private Permission permission;
 }

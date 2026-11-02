@@ -10,10 +10,18 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 
     boolean existsByNameIgnoreCase(String name);
 
-    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+    boolean existsByNameIgnoreCaseAndIdNot(
+            String name,
+            Long id
+    );
 
     Optional<Role> findByNameIgnoreCase(String name);
 
-    @EntityGraph(attributePaths = {"rolePermissions", "rolePermissions.permission"})
+    @EntityGraph(
+            attributePaths = {
+                    "rolePermissions",
+                    "rolePermissions.permission"
+            }
+    )
     Optional<Role> findWithPermissionsById(Long id);
 }
