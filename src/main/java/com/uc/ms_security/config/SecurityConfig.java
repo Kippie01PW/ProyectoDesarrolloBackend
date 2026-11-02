@@ -43,7 +43,9 @@ public class SecurityConfig {
                                 "/api/auth/2fa/verify",
                                 "/api/auth/oauth/**",
                                 "/api/auth/password-recovery",
-                                "/api/auth/password-reset"
+                                "/api/auth/password-reset",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password"
                         ).permitAll()
                         .anyRequest().access(dynamicAuthorizationManager))
                 .oauth2ResourceServer(resourceServer -> resourceServer

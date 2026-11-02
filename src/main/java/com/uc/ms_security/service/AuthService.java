@@ -5,7 +5,6 @@ import com.uc.ms_security.dto.auth.FirebaseLoginRequestDTO;
 import com.uc.ms_security.dto.auth.LoginRequestDTO;
 import com.uc.ms_security.dto.auth.PasswordRecoveryRequestDTO;
 import com.uc.ms_security.dto.auth.PasswordResetRequestDTO;
-import com.uc.ms_security.dto.auth.RegisterRequestDTO;
 import com.uc.ms_security.dto.auth.TwoFactorVerifyRequestDTO;
 import com.uc.ms_security.entity.PasswordResetToken;
 import com.uc.ms_security.entity.Session;
@@ -53,19 +52,6 @@ public class AuthService {
 
     @Value("${security.password-reset-duration-minutes:30}")
     private long passwordResetDurationMinutes;
-
-    public AuthResponseDTO register(RegisterRequestDTO dto) {
-        if (userRepository.existsByEmail(dto.email())) {
-            throw new ApplicationException(ErrorCase.ALREADY_EXISTS,
-                    "Ya existe un usuario con este email");
-        }
-        User user = new User();
-        user.setName(dto.name());
-        user.setEmail(dto.email());
-        user.setPassword(passwordEncoder.encode(dto.password()));
-        user.setAuthProvider("LOCAL");
-        return userResponse(userRepository.save(user));
-    }
 
     public AuthResponseDTO login(LoginRequestDTO dto) {
         User user = userRepository.findByEmail(dto.getEmail())
@@ -250,10 +236,6 @@ public class AuthService {
 
     private AuthResponseDTO createTokenResponse(User user) {
         return jwtService.generateToken(user);
-    }
-
-    private AuthResponseDTO userResponse(User user) {
-        return createActiveSession(user);
     }
 
     private ApplicationException unauthorized() {
