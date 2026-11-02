@@ -43,6 +43,8 @@ application-*.yml
 application-*.yaml
 
 ### Secrets and credentials ###
+FIREBASE_OAUTH.md
+firebase-service-account.json
 secrets/
 .secrets/
 credentials/

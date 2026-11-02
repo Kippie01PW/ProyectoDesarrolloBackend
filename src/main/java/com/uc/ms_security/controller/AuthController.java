@@ -8,7 +8,9 @@ import com.uc.ms_security.dto.auth.PasswordResetRequestDTO;
 import com.uc.ms_security.dto.auth.RegisterRequestDTO;
 import com.uc.ms_security.dto.auth.TwoFactorSettingDTO;
 import com.uc.ms_security.dto.auth.TwoFactorVerifyRequestDTO;
+import com.uc.ms_security.dto.user.UserResponseDTO;
 import com.uc.ms_security.service.AuthService;
+import com.uc.ms_security.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,10 +24,16 @@ import jakarta.servlet.http.HttpServletRequest;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
 
     @PostMapping("/login")
     public AuthResponseDTO login(@Valid @RequestBody LoginRequestDTO dto) {
         return authService.login(dto);
+    }
+
+    @GetMapping("/me")
+    public UserResponseDTO currentUser(Authentication authentication) {
+        return userService.findById(Long.valueOf(authentication.getName()));
     }
 
     @PostMapping("/register")

@@ -112,27 +112,41 @@ public class AuthService {
             if (email == null || email.isBlank()) {
                 throw unauthorized();
             }
+            if (!isEmailVerified(token)) {
+                throw new ApplicationException(
+                        ErrorCase.UNAUTHORIZED,
+                        "El correo del proveedor no está verificado");
+            }
             User user = userRepository.findByProviderSubject(token.getUid()).orElse(null);
             if (user == null) {
                 user = userRepository.findByEmail(email).orElse(null);
-                if (user != null && "LOCAL".equals(user.getAuthProvider())) {
-                    throw new ApplicationException(ErrorCase.UNAUTHORIZED,
-                            "El correo ya está registrado mediante credenciales");
-                }
                 if (user == null) {
                     user = new User();
                     user.setEmail(email);
                     user.setName(token.getName() == null ? email : token.getName());
                     user.setAuthProvider("FIREBASE");
+                } else if (user.getProviderSubject() != null
+                        && !user.getProviderSubject().equals(token.getUid())) {
+                    throw new ApplicationException(
+                            ErrorCase.INVALID_OPERATION,
+                            "El correo ya está vinculado a otra cuenta de Firebase");
                 }
                 user.setProviderSubject(token.getUid());
-                user.setPassword(null);
+                if (!"LOCAL".equals(user.getAuthProvider())) {
+                    user.setAuthProvider("FIREBASE");
+                    user.setPassword(null);
+                }
                 user = userRepository.save(user);
             }
             return createActiveSession(user);
         } catch (FirebaseAuthException | IllegalArgumentException exception) {
             throw unauthorized();
         }
+    }
+
+    private boolean isEmailVerified(FirebaseToken token) {
+        Object verified = token.getClaims().get("email_verified");
+        return Boolean.TRUE.equals(verified);
     }
 
     public void requestPasswordRecovery(PasswordRecoveryRequestDTO dto) {
