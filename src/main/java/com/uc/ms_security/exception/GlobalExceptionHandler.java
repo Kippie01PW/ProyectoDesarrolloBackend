@@ -22,7 +22,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApplicationException.class)
     public ResponseEntity<Map<String, String>> handleApplicationException(
-            ApplicationException exception) {
+            ApplicationException exception,
+            HttpServletRequest request) {
+
+        if (exception.getErrorCase() == ErrorCase.INVALID_OPERATION
+                || exception.getErrorCase() == ErrorCase.UNAUTHORIZED) {
+            logger.warn(
+                    "Error de autenticación en {} {}: {}",
+                    request.getMethod(),
+                    request.getRequestURI(),
+                    exception.getMessage()
+            );
+        }
 
         HttpStatus status = switch (exception.getErrorCase()) {
             case NOT_FOUND -> HttpStatus.NOT_FOUND;

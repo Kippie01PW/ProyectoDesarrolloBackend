@@ -24,6 +24,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -33,6 +35,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -102,6 +106,7 @@ public class AuthService {
     public AuthResponseDTO firebaseLogin(FirebaseLoginRequestDTO dto) {
         FirebaseApp firebaseApp = firebaseAppProvider.getIfAvailable();
         if (firebaseApp == null) {
+            logger.error("Se intentó autenticar con Firebase, pero Firebase Admin SDK no está configurado");
             throw new ApplicationException(ErrorCase.INVALID_OPERATION,
                     "La autenticación Firebase no está configurada");
         }
@@ -125,11 +130,6 @@ public class AuthService {
                     user.setEmail(email);
                     user.setName(token.getName() == null ? email : token.getName());
                     user.setAuthProvider("FIREBASE");
-                } else if (user.getProviderSubject() != null
-                        && !user.getProviderSubject().equals(token.getUid())) {
-                    throw new ApplicationException(
-                            ErrorCase.INVALID_OPERATION,
-                            "El correo ya está vinculado a otra cuenta de Firebase");
                 }
                 user.setProviderSubject(token.getUid());
                 if (!"LOCAL".equals(user.getAuthProvider())) {
@@ -140,7 +140,11 @@ public class AuthService {
             }
             return createActiveSession(user);
         } catch (FirebaseAuthException | IllegalArgumentException exception) {
+            logger.warn("Token Firebase rechazado: {}", exception.getMessage());
             throw unauthorized();
+        } catch (RuntimeException exception) {
+            logger.error("Error procesando el login OAuth de Firebase", exception);
+            throw exception;
         }
     }
 
