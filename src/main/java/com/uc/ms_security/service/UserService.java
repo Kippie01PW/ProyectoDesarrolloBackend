@@ -11,6 +11,7 @@ import com.uc.ms_security.exception.ApplicationException;
 import com.uc.ms_security.exception.ErrorCase;
 import com.uc.ms_security.mapper.UserMapper;
 import com.uc.ms_security.repository.RoleRepository;
+import com.uc.ms_security.repository.SessionRepository;
 import com.uc.ms_security.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final SessionRepository sessionRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -108,6 +110,8 @@ public class UserService {
 
     public void delete(Long id) {
         User user = findUser(id);
-        userRepository.delete(user);
+        user.setEnabled(false);
+        sessionRepository.deleteAllByUserId(id);
+        userRepository.save(user);
     }
 }

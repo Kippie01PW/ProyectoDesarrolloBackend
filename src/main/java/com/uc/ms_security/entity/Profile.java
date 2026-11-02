@@ -33,6 +33,9 @@ public class Profile {
         )
     private LocalDate birthDate;
 
+    @Column(name = "photo_url", length = 500)
+    private String photoUrl;
+
         @OneToOne(
             fetch = FetchType.LAZY
         )

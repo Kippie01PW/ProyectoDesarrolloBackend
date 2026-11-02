@@ -45,7 +45,6 @@ public class SecurityConfig {
                                 "/api/auth/password-recovery",
                                 "/api/auth/password-reset"
                         ).permitAll()
-                        .requestMatchers("/api/auth/me").authenticated()
                         .anyRequest().access(dynamicAuthorizationManager))
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .jwt(Customizer.withDefaults()));

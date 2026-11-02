@@ -39,6 +39,13 @@ public class DynamicAuthorizationManager
             return new AuthorizationDecision(false);
         }
 
+        String requestUri = request.getRequestURI();
+        if (requestUri.equals("/api/auth/me")
+                || requestUri.equals("/api/auth/logout")
+                || requestUri.equals("/api/auth/2fa")) {
+            return new AuthorizationDecision(true);
+        }
+
         Long userId;
         try {
             userId = Long.valueOf(authentication.getName());
@@ -49,7 +56,7 @@ public class DynamicAuthorizationManager
         boolean permitted = permissionService.hasPermission(
                 userId,
                 request.getMethod(),
-                request.getRequestURI()
+                requestUri
         );
 
         return new AuthorizationDecision(permitted);

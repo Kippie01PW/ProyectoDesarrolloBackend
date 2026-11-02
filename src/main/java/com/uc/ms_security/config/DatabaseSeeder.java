@@ -28,6 +28,12 @@ public class DatabaseSeeder {
             new PermissionSeed("GET", "/api/users/available-for-role/{id}", "User"),
             new PermissionSeed("PUT", "/api/users/{id}", "User"),
             new PermissionSeed("DELETE", "/api/users/{id}", "User"),
+            new PermissionSeed("POST", "/api/users/{id}/profile", "Profile"),
+            new PermissionSeed("GET", "/api/users/{id}/profile", "Profile"),
+            new PermissionSeed("PUT", "/api/users/{id}/profile", "Profile"),
+            new PermissionSeed("DELETE", "/api/users/{id}/profile", "Profile"),
+            new PermissionSeed("GET", "/api/users/{id}/sessions", "Session"),
+            new PermissionSeed("GET", "/api/users/{id}/sessions/{id}", "Session"),
             new PermissionSeed("GET", "/api/roles", "Role"),
             new PermissionSeed("POST", "/api/roles", "Role"),
             new PermissionSeed("GET", "/api/roles/{id}", "Role"),
@@ -49,7 +55,9 @@ public class DatabaseSeeder {
             new PermissionSeed("POST", "/api/role-permissions", "RolePermission"),
             new PermissionSeed("GET", "/api/role-permissions/roles/{id}", "RolePermission"),
             new PermissionSeed("GET", "/api/role-permissions/permissions/{id}", "RolePermission"),
-            new PermissionSeed("DELETE", "/api/role-permissions/{id}/{id}", "RolePermission")
+            new PermissionSeed("DELETE", "/api/role-permissions/{id}/{id}", "RolePermission"),
+            new PermissionSeed("POST", "/api/auth/logout", "Authentication"),
+            new PermissionSeed("PUT", "/api/auth/2fa", "Authentication")
     };
 
     private final UserRepository userRepository;

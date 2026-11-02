@@ -3,6 +3,7 @@ package com.uc.ms_security.dto.profile;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,4 +19,7 @@ public class ProfileRequestDTO {
     @NotNull(message = "La fecha de nacimiento es obligatoria")
     @Past(message = "La fecha de nacimiento debe estar en el pasado")
     private LocalDate birthDate;
+
+    @Size(max = 500, message = "La URL de la fotografía no puede superar 500 caracteres")
+    private String photoUrl;
 }

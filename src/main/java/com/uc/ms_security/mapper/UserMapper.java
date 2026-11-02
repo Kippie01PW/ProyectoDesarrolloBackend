@@ -33,13 +33,17 @@ public class UserMapper {
     public void updateBasicData(UpdateUserDTO dto, User user) {
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
+        if (dto.getEnabled() != null) {
+            user.setEnabled(dto.getEnabled());
+        }
     }
 
     public UserResponseDTO toResponseDTO(User user) {
         return new UserResponseDTO(
                 user.getId(),
                 user.getName(),
-                user.getEmail()
+                user.getEmail(),
+                user.isEnabled()
         );
     }
 

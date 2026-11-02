@@ -72,6 +72,7 @@ public class AuthService {
                 .orElseThrow(this::unauthorized);
 
         if (!"LOCAL".equals(user.getAuthProvider())
+                || !user.isEnabled()
                 || user.getPassword() == null
                 || !passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
             throw unauthorized();
@@ -143,6 +144,10 @@ public class AuthService {
                     user.setEmail(email);
                     user.setName(token.getName() == null ? email : token.getName());
                     user.setAuthProvider("FIREBASE");
+                } else if ("LOCAL".equals(user.getAuthProvider())) {
+                    throw new ApplicationException(
+                            ErrorCase.UNAUTHORIZED,
+                            "El correo ya está registrado con autenticación local");
                 }
                 user.setProviderSubject(token.getUid());
                 if (!"LOCAL".equals(user.getAuthProvider())) {
@@ -150,6 +155,9 @@ public class AuthService {
                     user.setPassword(null);
                 }
                 user = userRepository.save(user);
+            }
+            if (!user.isEnabled()) {
+                throw unauthorized();
             }
             return createActiveSession(user);
         } catch (FirebaseAuthException | IllegalArgumentException exception) {

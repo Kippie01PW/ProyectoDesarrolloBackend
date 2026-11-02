@@ -12,12 +12,14 @@ public class ProfileMapper {
         Profile profile = new Profile();
         profile.setPhone(dto.getPhone());
         profile.setBirthDate(dto.getBirthDate());
+        profile.setPhotoUrl(dto.getPhotoUrl());
         return profile;
     }
 
     public void updateEntity(ProfileRequestDTO dto, Profile profile) {
         profile.setPhone(dto.getPhone());
         profile.setBirthDate(dto.getBirthDate());
+        profile.setPhotoUrl(dto.getPhotoUrl());
     }
 
     public ProfileResponseDTO toResponseDTO(Profile profile) {
@@ -28,7 +30,8 @@ public class ProfileMapper {
         return new ProfileResponseDTO(
                 profile.getId(),
                 profile.getPhone(),
-                profile.getBirthDate()
+                profile.getBirthDate(),
+                profile.getPhotoUrl()
         );
     }
 }

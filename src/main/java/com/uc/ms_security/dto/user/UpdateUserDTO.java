@@ -21,4 +21,6 @@ public class UpdateUserDTO extends BaseUserDTO {
                     + "sin espacios"
     )
     private String password;
+
+    private Boolean enabled;
 }

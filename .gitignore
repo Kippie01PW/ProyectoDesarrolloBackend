@@ -78,3 +78,4 @@ logs/
 Thumbs.db
 src/main/resources/application.properties
 src/main/resources/application.properties
+FRONTEND_INTEGRATION.md
