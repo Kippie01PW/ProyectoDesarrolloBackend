@@ -33,7 +33,7 @@ public class ExternalIdentityService {
             ExternalIdentityRepository identityRepository,
             UserRepository userRepository,
             UserService userService,
-            @Value("${firebase.unverified-email-providers:}") String unverifiedProviders) {
+            @Value("${firebase.unverified-email-providers:github.com,github}") String unverifiedProviders) {
         this.identityRepository = identityRepository;
         this.userRepository = userRepository;
         this.userService = userService;
@@ -58,8 +58,12 @@ public class ExternalIdentityService {
 
         String email = normalizeEmail(identity.email());
 
-        if (!identity.emailVerified()
-                && !unverifiedEmailProviders.contains(identity.provider())) {
+        boolean allowUnverified = unverifiedEmailProviders.contains(identity.provider())
+                || unverifiedEmailProviders.contains(identity.provider().replace(".com", ""))
+                || "github.com".equals(identity.provider())
+                || "github".equals(identity.provider());
+
+        if (!identity.emailVerified() && !allowUnverified) {
             throw new ApplicationException(
                     ErrorCase.INVALID_OPERATION,
                     "El proveedor no confirma que el correo esté verificado"

@@ -11,9 +11,11 @@ import com.uc.ms_security.repository.RoleRepository;
 import com.uc.ms_security.repository.UserRepository;
 import com.uc.ms_security.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
@@ -67,9 +69,14 @@ public class DatabaseSeeder {
     private final RolePermissionRepository rolePermissionRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
     @Bean
     CommandLineRunner seedDatabase() {
         return arguments -> {
+            fixLegacySchemaConstraints();
+
             Role adminRole = findOrCreateRole("ADMIN", "Administrador");
             Role consultantRole = findOrCreateRole(
                     "CONSULTOR",
@@ -103,6 +110,22 @@ public class DatabaseSeeder {
             assignPermission(initialRole, findOrCreatePermission(
                     new PermissionSeed("PUT", "/api/profile/me", "Profile")));
         };
+    }
+
+    private void fixLegacySchemaConstraints() {
+        if (jdbcTemplate == null) return;
+        try {
+            jdbcTemplate.execute("ALTER TABLE sessions MODIFY COLUMN active bit DEFAULT 1");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN auth_provider varchar(30) DEFAULT 'LOCAL'");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN enabled bit DEFAULT 1");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN active bit DEFAULT 1");
+        } catch (Exception ignored) {}
     }
 
     private Role findOrCreateRole(String name, String description) {

@@ -10,7 +10,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        indexes = {
+                @Index(
+                        name = "idx_user_email",
+                        columnList = "email"
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -63,6 +71,15 @@ public class User {
     @ColumnDefault("'LOCAL'")
     private AuthMethod authMethod = AuthMethod.LOCAL;
 
+    /** Compatibilidad con esquemas heredados de BD donde auth_provider o enabled existían */
+    @Column(name = "auth_provider")
+    @ColumnDefault("'LOCAL'")
+    private String authProvider = "LOCAL";
+
+    @Column(name = "enabled")
+    @ColumnDefault("1")
+    private Boolean enabled = true;
+
     @OneToOne(
             mappedBy = "user",
             cascade = CascadeType.ALL,
@@ -94,6 +111,15 @@ public class User {
             fetch = FetchType.LAZY
     )
     private List<UserRole> userRoles = new ArrayList<>();
+
+    @PrePersist
+    @PreUpdate
+    public void syncLegacyFields() {
+        if (authMethod != null) {
+            this.authProvider = authMethod.name();
+        }
+        this.enabled = this.active;
+    }
 
     public void addSession(Session session) {
         sessions.add(session);

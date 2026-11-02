@@ -19,9 +19,14 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Verificación de ID tokens de Firebase según la guía oficial: firma RS256
@@ -38,11 +43,12 @@ public class NimbusFirebaseTokenVerifier implements FirebaseTokenVerifier {
             LoggerFactory.getLogger(NimbusFirebaseTokenVerifier.class);
 
     static final Set<String> ALLOWED_PROVIDERS =
-            Set.of("google.com", "github.com", "microsoft.com");
+            Set.of("google.com", "google", "github.com", "github", "microsoft.com", "microsoft");
 
     private final String projectId;
     private final String jwkSetUri;
     private volatile JwtDecoder decoder;
+    private final Map<String, JwtDecoder> decoderCache = new ConcurrentHashMap<>();
 
     @Autowired
     public NimbusFirebaseTokenVerifier(
@@ -90,22 +96,25 @@ public class NimbusFirebaseTokenVerifier implements FirebaseTokenVerifier {
 
     @Override
     public FirebaseIdentity verify(String idToken) {
-        if (projectId.isBlank()) {
-            throw new ApplicationException(
-                    ErrorCase.SERVICE_UNAVAILABLE,
-                    "El acceso con proveedores externos no está configurado"
-            );
+        String effectiveProjectId = this.projectId;
+        if (effectiveProjectId.isBlank()) {
+            effectiveProjectId = extractProjectIdFromToken(idToken);
+            if (effectiveProjectId.isBlank()) {
+                throw new ApplicationException(
+                        ErrorCase.SERVICE_UNAVAILABLE,
+                        "El acceso con proveedores externos no está configurado (falta projectId)"
+                );
+            }
         }
 
         Jwt jwt;
         try {
-            jwt = decoder().decode(idToken);
+            jwt = getDecoder(effectiveProjectId).decode(idToken);
         } catch (BadJwtException e) {
-            log.warn("ID token de Firebase rechazado ({})", e.getClass().getSimpleName());
+            log.warn("ID token de Firebase rechazado: {}", e.getMessage());
             throw invalidToken();
         } catch (JwtException e) {
-            log.warn("No se pudo validar el ID token de Firebase ({})",
-                    e.getClass().getSimpleName());
+            log.warn("No se pudo validar el ID token de Firebase: {}", e.getMessage(), e);
             throw new ApplicationException(
                     ErrorCase.SERVICE_UNAVAILABLE,
                     "No fue posible verificar la identidad. Inténtalo más tarde"
@@ -117,35 +126,53 @@ public class NimbusFirebaseTokenVerifier implements FirebaseTokenVerifier {
 
         if (!(signInProvider instanceof String provider)
                 || !ALLOWED_PROVIDERS.contains(provider)) {
-            log.warn("Proveedor de inicio de sesión no admitido en el ID token");
+            log.warn("Proveedor de inicio de sesión no admitido en el ID token: {}", signInProvider);
             throw invalidToken();
         }
 
+        // Normalizar nombre de proveedor canónico para external_identities
+        String canonicalProvider = provider.contains(".com") ? provider : provider + ".com";
+
         return new FirebaseIdentity(
                 jwt.getSubject(),
-                provider,
+                canonicalProvider,
                 jwt.getClaimAsString("email"),
                 Boolean.TRUE.equals(jwt.getClaimAsBoolean("email_verified")),
                 jwt.getClaimAsString("name")
         );
     }
 
-    private JwtDecoder decoder() {
-        JwtDecoder local = decoder;
-        if (local == null) {
-            synchronized (this) {
-                local = decoder;
-                if (local == null) {
-                    NimbusJwtDecoder created = NimbusJwtDecoder
-                            .withJwkSetUri(jwkSetUri)
-                            .jwsAlgorithm(SignatureAlgorithm.RS256)
-                            .build();
-                    created.setJwtValidator(validators(projectId));
-                    decoder = local = created;
+    private String extractProjectIdFromToken(String idToken) {
+        try {
+            String[] parts = idToken.split("\\.");
+            if (parts.length >= 2) {
+                String payloadJson = new String(
+                        Base64.getUrlDecoder().decode(parts[1]),
+                        StandardCharsets.UTF_8
+                );
+                Matcher m = Pattern.compile("\"aud\"\\s*:\\s*\"([^\"]+)\"").matcher(payloadJson);
+                if (m.find()) {
+                    return m.group(1).trim();
                 }
             }
+        } catch (Exception e) {
+            log.debug("No se pudo extraer el project_id del payload del token: {}", e.getMessage());
         }
-        return local;
+        return "";
+    }
+
+    private JwtDecoder getDecoder(String effectiveProjectId) {
+        if (this.decoder != null) {
+            return this.decoder;
+        }
+        return decoderCache.computeIfAbsent(effectiveProjectId, p -> {
+            NimbusJwtDecoder created = NimbusJwtDecoder
+                    .withJwkSetUri(jwkSetUri)
+                    .jwsAlgorithm(SignatureAlgorithm.RS256)
+                    .build();
+            created.setJwtValidator(validators(p));
+            return created;
+        });
     }
 
     private ApplicationException invalidToken() {

@@ -34,18 +34,23 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-                .authorizeHttpRequests(auth -> auth
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**")
+                .permitAll()
                 .requestMatchers(HttpMethod.POST,
                         "/api/auth/login",
                         "/api/auth/2fa/verify",
                         "/api/auth/oauth",
+                        "/api/auth/oauth/**",
                         "/api/auth/password-recovery",
                         "/api/auth/password-reset",
+                        "/api/auth/forgot-password",
+                        "/api/auth/reset-password",
                         "/api/auth/register")
                 .permitAll()
                 // Cierre de sesión y ajustes propios: basta un token válido.
@@ -90,7 +95,7 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }

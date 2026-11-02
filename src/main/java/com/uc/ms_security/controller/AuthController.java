@@ -70,7 +70,7 @@ public class AuthController {
     }
 
     /** Acceso con Google, GitHub o Microsoft: recibe el ID token de Firebase. */
-    @PostMapping("/oauth")
+    @PostMapping({"/oauth", "/oauth/firebase"})
     public AuthResponseDTO oauth(
             @Valid @RequestBody OAuthLoginRequestDTO dto,
             HttpServletRequest request) {

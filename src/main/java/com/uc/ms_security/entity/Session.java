@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
@@ -37,6 +38,10 @@ public class Session {
             length = 10
     )
     private String code2FA;
+
+    @Column(nullable = false)
+    @ColumnDefault("1")
+    private boolean active = true;
 
     @ManyToOne(
             fetch = FetchType.LAZY,
