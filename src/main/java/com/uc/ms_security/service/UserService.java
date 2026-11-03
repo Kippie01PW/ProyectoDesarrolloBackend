@@ -165,11 +165,17 @@ public class UserService {
         User updatedUser = userRepository.save(user);
         return userMapper.toResponseDTO(updatedUser);
     }
-    public UserResponseDTO updateStatus(Long id, UpdateUserStatusDTO dto) {
-        User user = findUser(id);
-        user.setActive(dto.getActive());
-        return userMapper.toResponseDTO(userRepository.save(user));
+    public UserResponseDTO updateStatus(Long id, UpdateUserStatusDTO dto, Long currentUserId) {
+    User user = findUser(id);
+    if (!dto.getActive() && id.equals(currentUserId)) {
+        throw new ApplicationException(
+                ErrorCase.INVALID_OPERATION,
+                "No puedes desactivar tu propia cuenta.");
     }
+    user.setActive(dto.getActive());
+    return userMapper.toResponseDTO(userRepository.save(user));
+    }
+
     public void delete(Long id) {
         User user = findUser(id);
         userRepository.delete(user);

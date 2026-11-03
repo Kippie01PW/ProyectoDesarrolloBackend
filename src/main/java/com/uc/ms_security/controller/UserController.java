@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/users")
@@ -55,9 +56,12 @@ public class UserController {
     @PutMapping("/{id}/status")
     public UserResponseDTO updateStatus(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateUserStatusDTO dto) {
-        return userService.updateStatus(id, dto);
+            @Valid @RequestBody UpdateUserStatusDTO dto,
+            Authentication authentication) {
+        Long currentUserId = Long.valueOf(authentication.getName());
+        return userService.updateStatus(id, dto, currentUserId);
     }
+
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
