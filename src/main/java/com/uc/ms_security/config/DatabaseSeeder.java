@@ -126,6 +126,30 @@ public class DatabaseSeeder {
         try {
             jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN active bit DEFAULT 1");
         } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE profiles MODIFY COLUMN photo_url LONGTEXT");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE password_reset_tokens MODIFY COLUMN token varchar(100) NULL DEFAULT NULL");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE password_reset_tokens MODIFY COLUMN expiration datetime NULL DEFAULT NULL");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE password_reset_tokens MODIFY COLUMN used bit NULL DEFAULT NULL");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE password_reset_tokens DROP INDEX token");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE password_reset_tokens DROP COLUMN token");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE password_reset_tokens DROP COLUMN expiration");
+        } catch (Exception ignored) {}
+        try {
+            jdbcTemplate.execute("ALTER TABLE password_reset_tokens DROP COLUMN used");
+        } catch (Exception ignored) {}
     }
 
     private Role findOrCreateRole(String name, String description) {

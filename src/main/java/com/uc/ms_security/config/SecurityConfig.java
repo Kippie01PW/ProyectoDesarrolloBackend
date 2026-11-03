@@ -64,6 +64,11 @@ public class SecurityConfig {
                 // Identidad y permisos propios: basta con tener un token válido.
                 .requestMatchers(HttpMethod.GET, "/api/auth/me")
                 .authenticated()
+                // Perfil propio: cualquier usuario autenticado puede consultar y editar sus datos personales.
+                .requestMatchers(HttpMethod.GET, "/api/profile/me")
+                .authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/profile/me")
+                .authenticated()
                 .anyRequest()
                 .access(dynamicAuthorizationManager)
             )

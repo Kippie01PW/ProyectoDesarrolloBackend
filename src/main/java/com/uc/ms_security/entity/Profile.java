@@ -33,9 +33,10 @@ public class Profile {
     )
     private LocalDate birthDate;
 
+    @Lob
     @Column(
             name = "photo_url",
-            columnDefinition = "MEDIUMTEXT"
+            columnDefinition = "LONGTEXT"
     )
     private String photoUrl;
 
