@@ -28,7 +28,7 @@ public class ProfileController {
     public ProfileResponseDTO update(
             @PathVariable Long userId,
             @Valid @RequestBody ProfileRequestDTO dto) {
-        return profileService.update(userId, dto);
+        return profileService.save(userId, dto);
     }
 
     @DeleteMapping
