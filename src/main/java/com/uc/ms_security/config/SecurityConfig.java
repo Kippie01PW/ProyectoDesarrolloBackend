@@ -69,6 +69,9 @@ public class SecurityConfig {
                 .authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/profile/me")
                 .authenticated()
+                // Validación interna de permisos consumida por otros microservicios (SecurityGuard).
+                .requestMatchers(HttpMethod.POST, "/api/internal/security/permissions-validation")
+                .authenticated()
                 .anyRequest()
                 .access(dynamicAuthorizationManager)
             )

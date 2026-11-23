@@ -62,6 +62,46 @@ public class DatabaseSeeder {
             new PermissionSeed("DELETE", "/api/users/{id}/sessions/{id}", "Session")
     };
 
+    // Permisos HTTP de Persona C (ms-gestion-deportiva, ACUERDOS.md 9.12–9.17 y 10.4)
+    // más permisos GET auxiliares consumidos por vistas/pruebas de C.
+    private static final PermissionSeed[] SPORTS_ADMIN_C_PERMISSIONS = {
+            // HU-GD-07: Asignar habilidades a jugadores
+            new PermissionSeed("POST", "/api/jugadores/{id}/habilidades", "Jugador"),
+            new PermissionSeed("GET", "/api/jugadores/{id}/habilidades", "Jugador"),
+            new PermissionSeed("GET", "/api/habilidades/{id}/jugadores", "Habilidad"),
+            new PermissionSeed("DELETE", "/api/jugadores/{id}/habilidades/{id}", "Jugador"),
+            // HU-GD-08: Consultar perfil deportivo del jugador
+            new PermissionSeed("GET", "/api/jugadores/{id}/perfil", "Jugador"),
+            // HU-GC-03: Gestionar fases de un torneo
+            new PermissionSeed("GET", "/api/torneos/{id}/fases", "Torneo"),
+            new PermissionSeed("GET", "/api/fases/{id}", "Fase"),
+            new PermissionSeed("PATCH", "/api/fases/{id}", "Fase"),
+            new PermissionSeed("DELETE", "/api/fases/{id}", "Fase"),
+            // HU-GC-04: Gestionar grupos de competencia
+            new PermissionSeed("POST", "/api/torneos/{id}/grupos", "Torneo"),
+            new PermissionSeed("GET", "/api/torneos/{id}/grupos", "Torneo"),
+            new PermissionSeed("GET", "/api/grupos/{id}", "Fase"),
+            new PermissionSeed("PUT", "/api/grupos/{id}", "Fase"),
+            new PermissionSeed("DELETE", "/api/grupos/{id}", "Fase"),
+            new PermissionSeed("POST", "/api/grupos/{id}/equipos", "Fase"),
+            new PermissionSeed("GET", "/api/grupos/{id}/equipos", "Fase"),
+            new PermissionSeed("DELETE", "/api/grupos/{id}/equipos/{id}", "Fase"),
+            new PermissionSeed("GET", "/api/grupos/{id}/tabla-posiciones", "Fase"),
+            // HU-GC-05: Gestionar fases finales
+            new PermissionSeed("POST", "/api/torneos/{id}/fase-final", "Torneo"),
+            new PermissionSeed("GET", "/api/torneos/{id}/fase-final", "Torneo"),
+            new PermissionSeed("PUT", "/api/fases-finales/{id}", "Fase"),
+            new PermissionSeed("DELETE", "/api/fases-finales/{id}", "Fase"),
+            new PermissionSeed("GET", "/api/fases-finales/{id}/llaves", "Fase"),
+            // HU-GC-08: Consultar desarrollo de un torneo
+            new PermissionSeed("GET", "/api/torneos/{id}/desarrollo", "Torneo"),
+            // Permisos GET auxiliares consumidos por pantallas/consultas de C (ACUERDOS 10.4)
+            new PermissionSeed("GET", "/api/jugadores", "Jugador"),
+            new PermissionSeed("GET", "/api/habilidades", "Habilidad"),
+            new PermissionSeed("GET", "/api/torneos", "Torneo"),
+            new PermissionSeed("GET", "/api/partidos/{id}/anotaciones", "Partido")
+    };
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
@@ -88,12 +128,23 @@ public class DatabaseSeeder {
                     "Rol inicial para usuarios registrados"
             );
 
+            Role sportsAdminRole = findOrCreateRole(
+                    "ADMINISTRADOR DEPORTIVO",
+                    "Administrador deportivo de gestión deportiva y competencias"
+            );
+
             User adminUser = findOrCreateUser();
             assignRole(adminUser, adminRole);
+            assignRole(adminUser, sportsAdminRole);
 
             for (PermissionSeed seed : ADMIN_PERMISSIONS) {
                 Permission permission = findOrCreatePermission(seed);
                 assignPermission(adminRole, permission);
+            }
+
+            for (PermissionSeed seed : SPORTS_ADMIN_C_PERMISSIONS) {
+                Permission permission = findOrCreatePermission(seed);
+                assignPermission(sportsAdminRole, permission);
             }
 
             Permission listUsers = findOrCreatePermission(

@@ -2,6 +2,8 @@ package com.uc.ms_security.service;
 
 import com.uc.ms_security.dto.PermissionRequestDTO;
 import com.uc.ms_security.dto.PermissionResponseDTO;
+import com.uc.ms_security.dto.PermissionValidationRequestDTO;
+import com.uc.ms_security.dto.PermissionValidationResponseDTO;
 import com.uc.ms_security.entity.Permission;
 import com.uc.ms_security.exception.ApplicationException;
 import com.uc.ms_security.exception.ErrorCase;
@@ -32,12 +34,20 @@ public class PermissionService {
         return permissionRepository
                 .findByUserIdAndMethodAndUrl(
                         userId,
-                        httpMethod.toUpperCase(Locale.ROOT),
+                        httpMethod.trim().toUpperCase(Locale.ROOT),
                         normalizedUrl
                 )
                 .stream()
                 .findAny()
                 .isPresent();
+    }
+
+    public PermissionValidationResponseDTO validatePermission(
+            Long userId,
+            PermissionValidationRequestDTO dto) {
+
+        boolean allowed = hasPermission(userId, dto.getMethod(), dto.getUrl());
+        return new PermissionValidationResponseDTO(allowed);
     }
 
     public PermissionResponseDTO create(PermissionRequestDTO dto) {
@@ -143,7 +153,15 @@ public class PermissionService {
     }
 
         private String normalizeUrl(String requestUrl) {
-                return requestUrl.replaceAll(
+                String cleaned = requestUrl.trim();
+                int queryIndex = cleaned.indexOf('?');
+                if (queryIndex >= 0) {
+                        cleaned = cleaned.substring(0, queryIndex);
+                }
+                if (cleaned.length() > 1 && cleaned.endsWith("/")) {
+                        cleaned = cleaned.substring(0, cleaned.length() - 1);
+                }
+                return cleaned.replaceAll(
                                 "(?i)(?<=/)(?:\\d+|[a-f0-9]{24})(?=/|$)",
                                 "{id}"
                 );

@@ -39,6 +39,7 @@ public class UserController {
     public UserResponseDTO findById(@PathVariable Long id) {
         return userService.findById(id);
     }
+
     @GetMapping("/{id}/profile")
     public UserDetailResponseDTO findByIdAndProfile(
             @PathVariable Long id) {
@@ -61,7 +62,6 @@ public class UserController {
         Long currentUserId = Long.valueOf(authentication.getName());
         return userService.updateStatus(id, dto, currentUserId);
     }
-
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
