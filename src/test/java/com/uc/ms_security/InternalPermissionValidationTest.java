@@ -1,10 +1,19 @@
 package com.uc.ms_security;
 
+import com.uc.ms_security.config.DatabaseSeeder;
 import com.uc.ms_security.entity.Role;
+import com.uc.ms_security.entity.Session;
 import com.uc.ms_security.entity.User;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,6 +22,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 class InternalPermissionValidationTest extends AbstractAuthTest {
 
     private static final String ENDPOINT = "/api/internal/security/permissions-validation";
+
+    @Autowired
+    private CommandLineRunner seedDatabase;
 
     @Test
     void returnsAllowedTrueWhenUserHasMatchingPermissionWithNormalizedIds() throws Exception {
@@ -103,6 +115,67 @@ class InternalPermissionValidationTest extends AbstractAuthTest {
         assertThat(result.getResponse().getStatus()).isEqualTo(400);
         assertThat(field(result, "$.url")).isNotBlank();
         assertThat(field(result, "$.method")).isNotBlank();
+    }
+
+    @Test
+    void returnsBadRequestWhenBodyIsMalformedJson() throws Exception {
+        localUser("json@liga.test", true, false);
+        String token = loginToken("json@liga.test");
+
+        MvcResult result = mockMvc.perform(post(ENDPOINT)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{malformed"))
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(field(result, "$.errorCase")).isEqualTo("INVALID_OPERATION");
+    }
+
+    @Test
+    void returnsUnauthorizedWhenSessionIsExpired() throws Exception {
+        User user = localUser("expirado@liga.test", true, false);
+        Role sportsAdmin = role("ADMINISTRADOR DEPORTIVO");
+        grant(sportsAdmin, "GET", "/api/deportes");
+        assign(user, sportsAdmin);
+
+        String token = loginToken("expirado@liga.test");
+        for (Session session : sessionRepository.findAll()) {
+            session.setExpiration(LocalDateTime.now().minusMinutes(5));
+            sessionRepository.save(session);
+        }
+
+        MvcResult expired = validate(token, "/api/deportes", "GET");
+        assertThat(expired.getResponse().getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void databaseSeederSeedsAll79SportsAdminPermissions() throws Exception {
+        Set<String> uniqueKeys = Arrays.stream(DatabaseSeeder.SPORTS_ADMIN_PERMISSIONS)
+                .map(seed -> seed.method() + " " + seed.url())
+                .collect(Collectors.toSet());
+        assertThat(DatabaseSeeder.SPORTS_ADMIN_PERMISSIONS).hasSize(79);
+        assertThat(uniqueKeys).hasSize(79);
+
+        seedDatabase.run();
+
+        Role sportsAdmin = roleRepository.findByNameIgnoreCase("ADMINISTRADOR DEPORTIVO").orElseThrow();
+        assertThat(rolePermissionRepository.findAllByRoleId(sportsAdmin.getId())).hasSize(79);
+
+        MvcResult loginResult = login("admin@uc.edu.co", "Admin123!");
+        assertThat(loginResult.getResponse().getStatus()).isEqualTo(200);
+        String token = field(loginResult, "$.accessToken");
+
+        // Rutas representativas de A, B y C con múltiples {id}
+        assertThat(field(validate(token, "/api/deportes/1/subdeportes", "GET"), "$.allowed")).isEqualTo("true");
+        assertThat(field(validate(token, "/api/equipos/4/deportes/1", "DELETE"), "$.allowed")).isEqualTo("true");
+        assertThat(field(validate(token, "/api/escenarios", "GET"), "$.allowed")).isEqualTo("true");
+        assertThat(field(validate(token, "/api/torneos/1/inscripciones/4", "DELETE"), "$.allowed")).isEqualTo("true");
+        assertThat(field(validate(token, "/api/equipos/4/jugadores/7/retiro", "PATCH"), "$.allowed")).isEqualTo("true");
+        assertThat(field(validate(token, "/api/partidos/20/resultado", "PUT"), "$.allowed")).isEqualTo("true");
+        assertThat(field(validate(token, "/api/anotaciones/50", "DELETE"), "$.allowed")).isEqualTo("true");
+        assertThat(field(validate(token, "/api/grupos/3/equipos/4", "DELETE"), "$.allowed")).isEqualTo("true");
+        assertThat(field(validate(token, "/api/torneos/1/desarrollo", "GET"), "$.allowed")).isEqualTo("true");
     }
 
     private MvcResult validate(String token, String url, String method) throws Exception {

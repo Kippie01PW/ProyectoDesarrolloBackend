@@ -37,7 +37,6 @@ build/
 .env.*
 !.env.example
 *.local
-aplication.properties
 application-*.properties
 application-*.yml
 application-*.yaml
@@ -76,6 +75,4 @@ logs/
 ### Operating system files ###
 .DS_Store
 Thumbs.db
-src/main/resources/application.properties
-src/main/resources/application.properties
 FRONTEND_INTEGRATION.md

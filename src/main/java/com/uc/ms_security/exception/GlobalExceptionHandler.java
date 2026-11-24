@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -83,6 +84,19 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(error);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, String>> handleUnreadableBody(
+            HttpMessageNotReadableException exception) {
+
+        Map<String, String> error = new LinkedHashMap<>();
+        error.put("errorCase", ErrorCase.INVALID_OPERATION.name());
+        error.put("message", "El cuerpo de la solicitud es obligatorio y debe ser un JSON válido");
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
                 .body(error);
     }
 

@@ -62,22 +62,88 @@ public class DatabaseSeeder {
             new PermissionSeed("DELETE", "/api/users/{id}/sessions/{id}", "Session")
     };
 
-    // Permisos HTTP de Persona C (ms-gestion-deportiva, ACUERDOS.md 9.12–9.17 y 10.4)
-    // más permisos GET auxiliares consumidos por vistas/pruebas de C.
-    private static final PermissionSeed[] SPORTS_ADMIN_C_PERMISSIONS = {
-            // HU-GD-07: Asignar habilidades a jugadores
+    // Los 79 permisos HTTP de ms-gestion-deportiva (ACUERDOS.md secciones 9.1–9.17 y 10.4):
+    // Persona A (28) + Persona B (27) + Persona C (24).
+    public static final PermissionSeed[] SPORTS_ADMIN_PERMISSIONS = {
+            // 9.1 Deportes (A - HU-GD-01)
+            new PermissionSeed("POST", "/api/deportes", "Deporte"),
+            new PermissionSeed("GET", "/api/deportes", "Deporte"),
+            new PermissionSeed("GET", "/api/deportes/{id}", "Deporte"),
+            new PermissionSeed("GET", "/api/deportes/{id}/subdeportes", "Deporte"),
+            new PermissionSeed("PUT", "/api/deportes/{id}", "Deporte"),
+            new PermissionSeed("PATCH", "/api/deportes/{id}/estado", "Deporte"),
+            new PermissionSeed("DELETE", "/api/deportes/{id}", "Deporte"),
+            // 9.2 Equipos (A - HU-GD-02)
+            new PermissionSeed("POST", "/api/equipos", "Equipo"),
+            new PermissionSeed("GET", "/api/equipos", "Equipo"),
+            new PermissionSeed("GET", "/api/equipos/{id}", "Equipo"),
+            new PermissionSeed("PUT", "/api/equipos/{id}", "Equipo"),
+            new PermissionSeed("PATCH", "/api/equipos/{id}/estado", "Equipo"),
+            new PermissionSeed("DELETE", "/api/equipos/{id}", "Equipo"),
+            // 9.3 Equipo <-> Deporte (A - HU-GD-03)
+            new PermissionSeed("POST", "/api/equipos/{id}/deportes", "Equipo"),
+            new PermissionSeed("GET", "/api/equipos/{id}/deportes", "Equipo"),
+            new PermissionSeed("GET", "/api/deportes/{id}/equipos", "Deporte"),
+            new PermissionSeed("DELETE", "/api/equipos/{id}/deportes/{id}", "Equipo"),
+            // 9.4 Escenarios (A - solo lectura)
+            new PermissionSeed("GET", "/api/escenarios", "Escenario"),
+            // 9.5 Torneos (A - HU-GC-01)
+            new PermissionSeed("POST", "/api/torneos", "Torneo"),
+            new PermissionSeed("GET", "/api/torneos", "Torneo"),
+            new PermissionSeed("GET", "/api/torneos/{id}", "Torneo"),
+            new PermissionSeed("PUT", "/api/torneos/{id}", "Torneo"),
+            new PermissionSeed("PATCH", "/api/torneos/{id}/estado", "Torneo"),
+            new PermissionSeed("DELETE", "/api/torneos/{id}", "Torneo"),
+            // 9.6 Inscripciones (A - HU-GC-02)
+            new PermissionSeed("POST", "/api/torneos/{id}/inscripciones", "Torneo"),
+            new PermissionSeed("GET", "/api/torneos/{id}/inscripciones", "Torneo"),
+            new PermissionSeed("GET", "/api/equipos/{id}/torneos", "Equipo"),
+            new PermissionSeed("DELETE", "/api/torneos/{id}/inscripciones/{id}", "Torneo"),
+            // 9.7 Jugadores (B - HU-GD-04)
+            new PermissionSeed("POST", "/api/jugadores", "Jugador"),
+            new PermissionSeed("GET", "/api/jugadores", "Jugador"),
+            new PermissionSeed("GET", "/api/jugadores/{id}", "Jugador"),
+            new PermissionSeed("PUT", "/api/jugadores/{id}", "Jugador"),
+            new PermissionSeed("PATCH", "/api/jugadores/{id}/estado", "Jugador"),
+            new PermissionSeed("DELETE", "/api/jugadores/{id}", "Jugador"),
+            // 9.8 Equipo <-> Jugador / contratos (B - HU-GD-05)
+            new PermissionSeed("POST", "/api/equipos/{id}/jugadores", "Equipo"),
+            new PermissionSeed("GET", "/api/equipos/{id}/jugadores", "Equipo"),
+            new PermissionSeed("GET", "/api/jugadores/{id}/equipos", "Jugador"),
+            new PermissionSeed("PATCH", "/api/equipos/{id}/jugadores/{id}/retiro", "Equipo"),
+            // 9.9 Habilidades (B - HU-GD-06)
+            new PermissionSeed("POST", "/api/habilidades", "Habilidad"),
+            new PermissionSeed("GET", "/api/habilidades", "Habilidad"),
+            new PermissionSeed("GET", "/api/habilidades/{id}", "Habilidad"),
+            new PermissionSeed("PUT", "/api/habilidades/{id}", "Habilidad"),
+            new PermissionSeed("DELETE", "/api/habilidades/{id}", "Habilidad"),
+            // 9.10 Partidos (B - HU-GC-06)
+            new PermissionSeed("POST", "/api/fases/{id}/partidos", "Fase"),
+            new PermissionSeed("GET", "/api/fases/{id}/partidos", "Fase"),
+            new PermissionSeed("GET", "/api/partidos", "Partido"),
+            new PermissionSeed("GET", "/api/partidos/{id}", "Partido"),
+            new PermissionSeed("PUT", "/api/partidos/{id}", "Partido"),
+            new PermissionSeed("PATCH", "/api/partidos/{id}/estado", "Partido"),
+            new PermissionSeed("DELETE", "/api/partidos/{id}", "Partido"),
+            // 9.11 Resultados y anotaciones (B - HU-GC-07)
+            new PermissionSeed("PUT", "/api/partidos/{id}/resultado", "Partido"),
+            new PermissionSeed("POST", "/api/partidos/{id}/anotaciones", "Partido"),
+            new PermissionSeed("GET", "/api/partidos/{id}/anotaciones", "Partido"),
+            new PermissionSeed("PUT", "/api/anotaciones/{id}", "Partido"),
+            new PermissionSeed("DELETE", "/api/anotaciones/{id}", "Partido"),
+            // 9.12 Habilidad <-> Jugador (C - HU-GD-07)
             new PermissionSeed("POST", "/api/jugadores/{id}/habilidades", "Jugador"),
             new PermissionSeed("GET", "/api/jugadores/{id}/habilidades", "Jugador"),
             new PermissionSeed("GET", "/api/habilidades/{id}/jugadores", "Habilidad"),
             new PermissionSeed("DELETE", "/api/jugadores/{id}/habilidades/{id}", "Jugador"),
-            // HU-GD-08: Consultar perfil deportivo del jugador
+            // 9.13 Perfil deportivo (C - HU-GD-08)
             new PermissionSeed("GET", "/api/jugadores/{id}/perfil", "Jugador"),
-            // HU-GC-03: Gestionar fases de un torneo
+            // 9.14 Fases (C - HU-GC-03)
             new PermissionSeed("GET", "/api/torneos/{id}/fases", "Torneo"),
             new PermissionSeed("GET", "/api/fases/{id}", "Fase"),
             new PermissionSeed("PATCH", "/api/fases/{id}", "Fase"),
             new PermissionSeed("DELETE", "/api/fases/{id}", "Fase"),
-            // HU-GC-04: Gestionar grupos de competencia
+            // 9.15 Grupos (C - HU-GC-04)
             new PermissionSeed("POST", "/api/torneos/{id}/grupos", "Torneo"),
             new PermissionSeed("GET", "/api/torneos/{id}/grupos", "Torneo"),
             new PermissionSeed("GET", "/api/grupos/{id}", "Fase"),
@@ -87,19 +153,14 @@ public class DatabaseSeeder {
             new PermissionSeed("GET", "/api/grupos/{id}/equipos", "Fase"),
             new PermissionSeed("DELETE", "/api/grupos/{id}/equipos/{id}", "Fase"),
             new PermissionSeed("GET", "/api/grupos/{id}/tabla-posiciones", "Fase"),
-            // HU-GC-05: Gestionar fases finales
+            // 9.16 Fase final (C - HU-GC-05)
             new PermissionSeed("POST", "/api/torneos/{id}/fase-final", "Torneo"),
             new PermissionSeed("GET", "/api/torneos/{id}/fase-final", "Torneo"),
             new PermissionSeed("PUT", "/api/fases-finales/{id}", "Fase"),
             new PermissionSeed("DELETE", "/api/fases-finales/{id}", "Fase"),
             new PermissionSeed("GET", "/api/fases-finales/{id}/llaves", "Fase"),
-            // HU-GC-08: Consultar desarrollo de un torneo
-            new PermissionSeed("GET", "/api/torneos/{id}/desarrollo", "Torneo"),
-            // Permisos GET auxiliares consumidos por pantallas/consultas de C (ACUERDOS 10.4)
-            new PermissionSeed("GET", "/api/jugadores", "Jugador"),
-            new PermissionSeed("GET", "/api/habilidades", "Habilidad"),
-            new PermissionSeed("GET", "/api/torneos", "Torneo"),
-            new PermissionSeed("GET", "/api/partidos/{id}/anotaciones", "Partido")
+            // 9.17 Desarrollo del torneo (C - HU-GC-08)
+            new PermissionSeed("GET", "/api/torneos/{id}/desarrollo", "Torneo")
     };
 
     private final UserRepository userRepository;
@@ -142,7 +203,7 @@ public class DatabaseSeeder {
                 assignPermission(adminRole, permission);
             }
 
-            for (PermissionSeed seed : SPORTS_ADMIN_C_PERMISSIONS) {
+            for (PermissionSeed seed : SPORTS_ADMIN_PERMISSIONS) {
                 Permission permission = findOrCreatePermission(seed);
                 assignPermission(sportsAdminRole, permission);
             }
@@ -233,7 +294,7 @@ public class DatabaseSeeder {
                     created.setModel(seed.model());
                     return permissionRepository.save(created);
                 });
-        if (permission.getModel() == null || permission.getModel().isBlank()) {
+        if (permission.getModel() == null || !permission.getModel().equals(seed.model())) {
             permission.setModel(seed.model());
             permission = permissionRepository.save(permission);
         }
@@ -262,6 +323,6 @@ public class DatabaseSeeder {
         }
     }
 
-    private record PermissionSeed(String method, String url, String model) {
+    public record PermissionSeed(String method, String url, String model) {
     }
 }
